@@ -285,6 +285,43 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code patterns, and
 
 ---
 
+## Fork Customizations
+
+This fork extends the official [iNiR](https://github.com/snowarch/inir) (v2.29.1) with the following additions and bugfixes:
+
+### New Features
+
+**Display Output Manager** (`modules/sidebarRight/outputs/`)
+- Full display management panel integrated into the sidebar right
+- Add/remove/reorder monitors directly from the sidebar
+- Configurable via `Config.options.sidebar.outputManager.enable`
+- New `"displays"` section in both default and compact sidebar layouts
+
+**Screen Mirroring** (`modules/sidebarRight/screenMirror/`)
+- Screen mirror dialog accessible from quick toggles
+- Toggle available for both classic and android quick panel styles
+- `AndroidScreenMirrorToggle` and `ScreenMirrorToggle` delegates
+
+**Niri Theme Color Script** (`scripts/colors/modules/05-niri-theme.sh`)
+- Auto-theming support for Niri's own theme configuration
+- New theming target: `niri-theme.json`
+
+### Bugfixes
+
+**Keyring unlock security** (`scripts/keyring/unlock.sh`)
+- Replaced `eval` with direct pipe to `gnome-keyring-daemon`, preventing potential code injection via crafted passwords
+
+**WindowDialog overflow** (`modules/common/widgets/WindowDialog.qml`)
+- Added `clip: true` to dialog content column to prevent items with negative margins (e.g. WiFi/Bluetooth lists) from rendering outside rounded corners
+
+**Keyboard layout text overflow** (`modules/onScreenDisplay/indicators/KeyboardLayoutIndicator.qml`)
+- Added `elide: Text.ElideRight` and `maximumLineCount: 1` to prevent long keyboard layout names from breaking the indicator layout
+
+**Waffle clipboard loader cleanup** (`ShellWafflePanels.qml`)
+- Removed dead `iiClipboard` `DeferredPanelLoader` whose `extraCondition` was always `false` in the waffle panel family
+
+---
+
 ## Credits
 
 - [**end-4**](https://github.com/end-4/dots-hyprland): illogical-impulse, the Hyprland dots iNiR forked from
