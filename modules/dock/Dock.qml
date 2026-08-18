@@ -84,11 +84,34 @@ Scope {
                 visible: !GlobalStates.screenLocked
                     && !GlobalStates.widgetEditMode
 
+                // Hover-reveal debounce: when containsMouse toggles during the
+                // slide animation the dock would flicker (open-close loop).
+                // Keep the hover state "alive" briefly after the cursor leaves
+                // so the animation can finish without interruption.
+                property bool _hoverDebounced: false
+                Timer {
+                    id: hoverDebounceTimer
+                    interval: 200
+                    onTriggered: dockRoot._hoverDebounced = false
+                }
+                Connections {
+                    target: dockMouseArea
+                    function onContainsMouseChanged() {
+                        if (dockMouseArea.containsMouse) {
+                            dockRoot._hoverDebounced = true
+                            hoverDebounceTimer.restart()
+                        } else {
+                            hoverDebounceTimer.restart()
+                        }
+                    }
+                }
+
                 property bool reveal: !GlobalStates.coverflowSelectorOpen
                     && !(GlobalStates.wallpaperLauncherOpen && root.position === "bottom")
                     && GlobalStates.shellEntryReady
                     && (ShellEditSession.active || root.pinned
-                        || (Config.options?.dock?.hoverToReveal && dockMouseArea.containsMouse)
+                        || (Config.options?.dock?.hoverToReveal
+                            && (dockMouseArea.containsMouse || dockRoot._hoverDebounced))
                         || (dockApps?.requestDockShow || dockAppsVertical?.requestDockShow)
                         || (Config.options?.dock?.showOnDesktop !== false
                             && !ToplevelManager.activeToplevel?.activated))
