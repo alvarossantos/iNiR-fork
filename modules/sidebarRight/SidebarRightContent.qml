@@ -23,6 +23,8 @@ import qs.modules.sidebarRight.hotspot
 import qs.modules.sidebarRight.nightLight
 import qs.modules.sidebarRight.volumeMixer
 import qs.modules.sidebarRight.wifiNetworks
+import qs.modules.sidebarRight.outputs
+import qs.modules.sidebarRight.screenMirror
 
 Item {
     id: root
@@ -46,6 +48,7 @@ Item {
     property bool showHotspotDialog: false
     property bool showNightLightDialog: false
     property bool showWifiDialog: false
+    property bool showMirrorDialog: false
     property bool editMode: false
 
     readonly property bool anyDialogOpen: showAudioOutputDialog || showAudioInputDialog
@@ -152,7 +155,7 @@ Item {
     // Sanitized: unknown ids dropped, missing ids appended in default order,
     // so a stale or hand-edited config can never blank the sidebar.
     readonly property string headerStyle: Config.options?.sidebar?.right?.headerStyle ?? "profile"
-    readonly property var _sectionDefaultOrder: ["system", "sliders", "toggles", "notifications", "widgets"]
+    readonly property var _sectionDefaultOrder: ["system", "sliders", "displays", "toggles", "notifications", "widgets"]
     readonly property var sectionOrder: {
         const def = root._sectionDefaultOrder
         const saved = Config.options?.sidebar?.right?.sectionOrder ?? def
@@ -399,6 +402,7 @@ Item {
     }
     Rectangle {
         id: sidebarRightBackground
+        clip: true
 
         anchors.top: parent.top
         anchors.left: parent.left
@@ -641,10 +645,15 @@ Item {
                     Layout.topMargin: (modelData === "system" && root.headerStyle === "classic") ? 5 : 0
                     visible: active
                     active: {
-                        if (modelData !== "sliders") return true
-                        const configQuickSliders = Config.options?.sidebar?.quickSliders
-                        if (!configQuickSliders?.enable) return false
-                        if (!configQuickSliders?.showMic && !configQuickSliders?.showVolume && !configQuickSliders?.showBrightness) return false
+                        if (modelData === "sliders") {
+                            const configQuickSliders = Config.options?.sidebar?.quickSliders
+                            if (!configQuickSliders?.enable) return false
+                            if (!configQuickSliders?.showMic && !configQuickSliders?.showVolume && !configQuickSliders?.showBrightness) return false
+                            return true
+                        }
+                        if (modelData === "displays") {
+                            return (Config.options?.sidebar?.outputManager?.enable ?? true)
+                        }
                         return true
                     }
                     opacity: root._entranceCascade >= index
@@ -815,6 +824,7 @@ Item {
                                 return root.headerStyle === "classic"
                                     ? systemSectionComponent : profileHeaderComponent
                             case "sliders": return slidersSectionComponent
+                            case "displays": return displaysSectionComponent
                             case "toggles":
                                 return (Config.options?.sidebar?.quickToggles?.style ?? "classic") === "android"
                                     ? androidTogglesComponent : classicTogglesComponent
@@ -836,6 +846,7 @@ Item {
                         function onOpenNightLightDialog() { root.showNightLightDialog = true }
                         function onOpenHotspotDialog() { root.showHotspotDialog = true }
                         function onOpenWifiDialog() { root.showWifiDialog = true }
+                        function onOpenMirrorDialog() { root.showMirrorDialog = true }
                         function onOpenEventsDialog(editEvent) {
                             root.eventsDialogEditEvent = editEvent
                             root.showEventsDialog = true
@@ -878,6 +889,12 @@ Item {
         Component { id: androidTogglesComponent; AndroidQuickPanel { editMode: root.editMode } }
         Component { id: centerSectionComponent; CenterWidgetGroup { collapsed: root.notifsCollapsed } }
         Component { id: widgetsSectionComponent; BottomWidgetGroup {} }
+        Component {
+            id: displaysSectionComponent
+            OutputManager {
+                visible: (Config.options?.sidebar?.outputManager?.enable ?? true)
+            }
+        }
 
     }
 
@@ -962,6 +979,11 @@ Item {
                 root.eventsDialogEditEvent = null;
             }
         }
+    }
+
+    ToggleDialog {
+        shownPropertyString: "showMirrorDialog"
+        dialog: ScreenMirrorDialog {}
     }
 
     component ToggleDialog: Loader {

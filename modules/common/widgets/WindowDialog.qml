@@ -146,6 +146,9 @@ Rectangle {
     // Keep text and icons at their final pixel-aligned position while the chrome
     // performs its reveal motion. Native-rendered glyphs stay crisp because they
     // are no longer children of the translated/resized background item.
+    // clip: true prevents dialog content (e.g. WiFi/Bluetooth list items with
+    // negative Layout margins) from overflowing outside the GlassBackground
+    // popup area, which would otherwise render beyond the rounded corners.
     ColumnLayout {
         id: contentColumn
         x: dialogBackground.x + dialogBackground.contentPad
@@ -153,6 +156,7 @@ Rectangle {
         width: Math.max(0, dialogBackground.implicitWidth - dialogBackground.contentPad * 2)
         height: Math.max(0, dialogBackground.resolvedHeight - dialogBackground.contentPad * 2)
         spacing: 16
+        clip: true
         opacity: root.show ? 1 : 0
         visible: opacity > 0
         Behavior on opacity {

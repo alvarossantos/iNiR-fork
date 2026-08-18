@@ -71,6 +71,8 @@ Item {
             StyledText {
                 Layout.fillWidth: true
                 text: KeyboardIndicators.popupText
+                elide: Text.ElideRight
+                maximumLineCount: 1
                 font.pixelSize: Appearance.font.pixelSize.normal
                 color: Appearance.angelEverywhere ? Appearance.angel.colText
                      : Appearance.inirEverywhere ? Appearance.inir.colText

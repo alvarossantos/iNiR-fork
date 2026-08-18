@@ -1508,6 +1508,9 @@
             "showMic": true,
             "showVolume": true
         },
+        "outputManager": {
+            "enable": true
+        },
         "quickToggles": {
             "android": {
                 "columns": 4,
@@ -1558,6 +1561,7 @@
             "sectionOrder": [
                 "system",
                 "sliders",
+                "displays",
                 "toggles",
                 "notifications",
                 "widgets"
@@ -1567,6 +1571,7 @@
             "headerBannerPath": "",
             "controlsSectionOrder": [
                 "sliders",
+                "displays",
                 "toggles",
                 "devices",
                 "media",

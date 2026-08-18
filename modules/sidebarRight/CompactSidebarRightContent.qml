@@ -35,6 +35,8 @@ import qs.modules.sidebarRight.hotspot
 import qs.modules.sidebarRight.volumeMixer
 import qs.modules.sidebarRight.wifiNetworks
 import qs.modules.sidebarLeft.widgets
+import qs.modules.sidebarRight.outputs
+import qs.modules.sidebarRight.screenMirror
 
 import qs.modules.sidebarRight.calendar
 import qs.modules.sidebarRight.todo
@@ -65,6 +67,7 @@ Item {
     property bool showHotspotDialog: false
     property bool showNightLightDialog: false
     property bool showWifiDialog: false
+    property bool showMirrorDialog: false
     property bool editMode: false
     property bool layoutEditMode: false // Edit mode for reordering Controls sections
     property var eventsDialogEditEvent: null
@@ -91,7 +94,7 @@ Item {
     readonly property int compactGridSpacing: compactNarrowWidth ? 4 : 5
     
     // Controls section order from config
-    readonly property var defaultSectionOrder: ["sliders", "toggles", "devices", "media", "quickActions"]
+    readonly property var defaultSectionOrder: ["sliders", "displays", "toggles", "devices", "media", "quickActions"]
     property var controlsSectionOrder: Config.options?.sidebar?.right?.controlsSectionOrder ?? defaultSectionOrder
     
     function moveSectionUp(index: int): void {
@@ -1497,6 +1500,7 @@ Item {
                                     text: {
                                         switch (sectionDelegate.modelData) {
                                             case "sliders": return Translation.tr("Sliders")
+                                            case "displays": return Translation.tr("Displays")
                                             case "toggles": return Translation.tr("Quick Toggles")
                                             case "devices": return Translation.tr("Devices")
                                             case "media": return Translation.tr("Media Player")
@@ -1556,6 +1560,16 @@ Item {
                             
                             Loader {
                                 Layout.fillWidth: true
+                                active: sectionDelegate.modelData === "displays"
+                                visible: active && (Config.options?.sidebar?.outputManager?.enable ?? true)
+                                sourceComponent: OutputManager {
+                                    verticalPadding: controlsRoot.controlsInnerPadding
+                                    horizontalPadding: controlsRoot.controlsAreaPadding
+                                }
+                            }
+
+                            Loader {
+                                Layout.fillWidth: true
                                 active: sectionDelegate.modelData === "toggles"
                                 visible: active
                                 sourceComponent: ColumnLayout {
@@ -1603,6 +1617,7 @@ Item {
                                             function onOpenNightLightDialog()  { root.showNightLightDialog  = true }
                                             function onOpenHotspotDialog()     { root.showHotspotDialog     = true }
                                             function onOpenWifiDialog()        { root.showWifiDialog        = true }
+                                            function onOpenMirrorDialog()      { root.showMirrorDialog      = true }
                                         }
                                     }
                                     Loader {
@@ -1620,6 +1635,7 @@ Item {
                                             function onOpenNightLightDialog()  { root.showNightLightDialog  = true }
                                             function onOpenHotspotDialog()     { root.showHotspotDialog     = true }
                                             function onOpenWifiDialog()        { root.showWifiDialog        = true }
+                                            function onOpenMirrorDialog()      { root.showMirrorDialog      = true }
                                         }
                                     }
                                 }
@@ -1785,6 +1801,11 @@ Item {
                 root.eventsDialogEditEvent = null
             }
         }
+    }
+
+    ToggleDialog {
+        shownPropertyString: "showMirrorDialog"
+        dialog: ScreenMirrorDialog {}
     }
 
     // ── Cooldown timers ───────────────────────────────────────────

@@ -54,5 +54,9 @@ AbstractQuickPanel {
         GameMode {}
         
         CloudflareWarp {}
+
+        ScreenMirrorToggle {
+            onOpenMirrorDialog: root.openMirrorDialog()
+        }
     }
 }

@@ -14,10 +14,12 @@ if [[ -z "${UNLOCK_PASSWORD}" ]]; then
     read -s UNLOCK_PASSWORD || return
 fi
 
-# Unlock
+# Unlock — pipe directly to gnome-keyring-daemon, no eval.
+# The daemon outputs "export VAR=VALUE" lines on stdout which we source.
 killall -q -u "$(whoami)" gnome-keyring-daemon
-eval $(echo -n "${UNLOCK_PASSWORD}" \
-           | gnome-keyring-daemon --daemonize --login \
-           | sed -e 's/^/export /')
+while IFS= read -r line; do
+    export "${line#export }"
+done < <(echo -n "${UNLOCK_PASSWORD}" \
+            | gnome-keyring-daemon --daemonize --login 2>/dev/null)
 unset UNLOCK_PASSWORD
 echo '' >&2

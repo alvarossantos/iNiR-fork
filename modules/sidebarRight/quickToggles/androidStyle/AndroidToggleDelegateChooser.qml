@@ -20,6 +20,7 @@ DelegateChooser {
     signal openHotspotDialog()
     signal openNightLightDialog()
     signal openWifiDialog()
+    signal openMirrorDialog()
 
     role: "type"
 
@@ -287,6 +288,20 @@ DelegateChooser {
         onOpenMenu: {
             root.openNightLightDialog()
         }
+    } }
+
+    DelegateChoice { roleValue: "screenMirror"; AndroidScreenMirrorToggle {
+        required property int index
+        required property var modelData
+        buttonIndex: root.startingIndex + index
+        buttonData: modelData
+        editMode: root.editMode
+        expandedSize: modelData.size > 1
+        baseCellWidth: root.baseCellWidth
+        baseCellHeight: root.baseCellHeight
+        cellSpacing: root.spacing
+        cellSize: modelData.size
+        onOpenMirrorDialog: root.openMirrorDialog()
     } }
 
 }

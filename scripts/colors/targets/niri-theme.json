@@ -1,0 +1,9 @@
+{
+  "id": "niri-theme",
+  "label": "Niri Borders & Focus Ring",
+  "module": "05-niri-theme.sh",
+  "category": "compositor",
+  "inputs": ["colors.json"],
+  "description": "Update Niri compositor border, focus-ring, tab-indicator, and recent-windows highlight colors from the generated wallpaper palette.",
+  "configKey": "appearance.wallpaperTheming.enableAppsAndShell"
+}

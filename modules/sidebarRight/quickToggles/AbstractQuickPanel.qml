@@ -30,4 +30,5 @@ Rectangle {
     signal openHotspotDialog()
     signal openNightLightDialog()
     signal openWifiDialog()
+    signal openMirrorDialog()
 }
