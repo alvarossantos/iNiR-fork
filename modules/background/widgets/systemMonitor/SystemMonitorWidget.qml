@@ -305,6 +305,7 @@ AbstractBackgroundWidget {
         surfaceColor: root.widgetSurfaceInk
         colorMode: root.colorMode
         surfaceAccent: root.widgetAccent
+        surfaceFill: root.widgetPlateColor
         surfaceUseBlur: root.effectiveBlur
         screenX: root.x
         screenY: root.y
@@ -644,7 +645,17 @@ AbstractBackgroundWidget {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 radius: root.cardRadius
-                color: tile.role.bg
+                color: Appearance.regaliaEverywhere ? "transparent" : tile.role.bg
+
+                RegaliaPlate {
+                    anchors.fill: parent
+                    z: -1
+                    visible: Appearance.regaliaEverywhere
+                    radius: tile.radius
+                    fillColor: tile.role.bg
+                    inset: Appearance.regalia.surfaceInset
+                    elevated: true
+                }
 
                 Behavior on color {
                     enabled: Appearance.animationsEnabled
@@ -659,6 +670,7 @@ AbstractBackgroundWidget {
                     target: tile
                     z: -2
                     visible: !Appearance.zzzEverywhere && !Appearance.inirEverywhere
+                        && !Appearance.regaliaEverywhere
                 }
 
                 ColumnLayout {

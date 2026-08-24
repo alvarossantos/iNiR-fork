@@ -441,18 +441,22 @@ Item { // Wrapper
         clip: true
         implicitWidth: columnLayout.implicitWidth
         implicitHeight: columnLayout.implicitHeight
-        radius: root.zzzEverywhere ? Appearance.zzz.panelRadius : searchBar.height / 2 + searchBar.verticalPadding
+        radius: root.zzzEverywhere ? Appearance.zzz.panelRadius
+            : Appearance.regaliaEverywhere
+                ? (root.showResults ? Appearance.regalia.panelRadius : Appearance.regalia.roundLarge)
+                : searchBar.height / 2 + searchBar.verticalPadding
         // Collapsed zzz search: let ZzzGraphicPlate own the (chamfered/rounded) fill so
         // the GlassBackground's rounded rect doesn't escape behind it. Results surface
         // still needs the paper fill (its backdrop is decoration only).
-        fallbackColor: root.islandStyle ? "transparent"
+        fallbackColor: root.islandStyle || Appearance.regaliaEverywhere ? "transparent"
             : root.zzzEverywhere ? (root.showResults ? Appearance.zzz.paper : "transparent") : Appearance.colors.colBackgroundSurfaceContainer
         inirColor: root.islandStyle ? "transparent" : Appearance.inir.colLayer1
         auroraTransparency: Appearance.aurora.popupTransparentize
-        wallpaperBackdropEnabled: root.panelVisible && !root.zzzEverywhere && !root.islandStyle
+        wallpaperBackdropEnabled: root.panelVisible && !root.zzzEverywhere
+            && !Appearance.regaliaEverywhere && !root.islandStyle
         // Collapsed ZZZ search keeps its integrated plate border, while the
         // expanded results surface uses the shared panel backdrop + real border.
-        border.width: root.islandStyle ? 0
+        border.width: root.islandStyle || Appearance.regaliaEverywhere ? 0
             : root.zzzEverywhere
             ? (root.showResults ? Appearance.zzz.borderThick : 0)
             : auroraEverywhere || inirEverywhere ? 1 : 0
@@ -466,6 +470,16 @@ Item { // Wrapper
         Behavior on border.color {
             enabled: Appearance.animationsEnabled
             ColorAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Appearance.animation.elementMoveFast.type; easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve }
+        }
+
+        RegaliaPlate {
+            anchors.fill: parent
+            visible: Appearance.regaliaEverywhere && !root.islandStyle
+            fillColor: root.showResults ? Appearance.regalia.bg1 : Appearance.regalia.barSurfaceFloating
+            radius: searchWidgetContent.radius
+            inset: root.showResults ? Appearance.regalia.surfaceInset : Appearance.regalia.controlInset
+            elevated: true
+            glassEnabled: true
         }
 
         // Ricelin island face — outer shadow already comes from
@@ -563,7 +577,9 @@ Item { // Wrapper
                 visible: root.showResults && !root.actionMode
                 Layout.fillWidth: true
                 height: 1
-                color: root.zzzEverywhere ? Appearance.zzz.hairline : Appearance.colors.colOutlineVariant
+                color: root.zzzEverywhere ? Appearance.zzz.hairline
+                    : Appearance.regaliaEverywhere ? Appearance.regalia.separator
+                    : Appearance.colors.colOutlineVariant
                 Behavior on color { enabled: Appearance.animationsEnabled; ColorAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Appearance.animation.elementMoveFast.type; easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve } }
             }
 

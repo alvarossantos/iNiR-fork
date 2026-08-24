@@ -1853,7 +1853,8 @@ ContentPage {
                             to: 800
                             stepSize: 20
                             onValueChanged: Config.setNestedValue("bar.autoHide.showWhenPressingSuper.delay", value)
-                            enabled: Config.options?.bar?.autoHide?.showWhenPressingSuper?.enable ?? true
+                            enabled: CompositorService.isHyprland
+                                && (Config.options?.bar?.autoHide?.showWhenPressingSuper?.enable ?? true)
                             opacity: enabled ? 1 : 0.5
                         }
                     }
@@ -1864,9 +1865,13 @@ ContentPage {
                             buttonIcon: "keyboard_command_key"
                             text: Translation.tr("Peek on Super press")
                             checked: Config.options?.bar?.autoHide?.showWhenPressingSuper?.enable ?? true
+                            enabled: CompositorService.isHyprland
+                            opacity: enabled ? 1 : 0.5
                             onCheckedChanged: Config.setNestedValue("bar.autoHide.showWhenPressingSuper.enable", checked)
                             StyledToolTip {
-                                text: Translation.tr("Reveal the bar while the Super key is held.")
+                                text: CompositorService.isHyprland
+                                    ? Translation.tr("Reveal the bar while the Super key is held.")
+                                    : Translation.tr("Super-only hold detection is not available on Niri.")
                             }
                         }
                         SettingsSwitch {

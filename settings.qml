@@ -927,7 +927,9 @@ ApplicationWindow {
 
                                     readonly property int pageRealIndex: navItem.modelData.realIndex !== undefined ? navItem.modelData.realIndex : navItem.index
 
-                                    buttonRadius: Appearance.zzzEverywhere
+                                    buttonRadius: Appearance.regaliaEverywhere
+                                        ? Appearance.regalia.roundSmall
+                                        : Appearance.zzzEverywhere
                                         ? Appearance.zzz.controlRadius
                                         : Math.min(width, height) / 2
                                     toggled: root.currentPage === pageRealIndex
@@ -936,8 +938,11 @@ ApplicationWindow {
                                     // Control's own background (which renders above the pill).
                                     rippleEnabled: !Appearance.zzzEverywhere
                                     colBackground: "transparent"
-                                    colBackgroundToggled: "transparent"
-                                    colBackgroundToggledHover: Appearance.zzzEverywhere
+                                    colBackgroundToggled: Appearance.regaliaEverywhere
+                                        ? Appearance.regalia.primaryPlate : "transparent"
+                                    colBackgroundToggledHover: Appearance.regaliaEverywhere
+                                        ? Appearance.regalia.primaryPlateHover
+                                        : Appearance.zzzEverywhere
                                         ? "transparent"
                                         : Appearance.angelEverywhere
                                         ? Appearance.angel.colGlassCardHover
@@ -946,7 +951,9 @@ ApplicationWindow {
                                             : Appearance.auroraEverywhere
                                                 ? Appearance.aurora.colElevatedSurface
                                                 : CF.ColorUtils.transparentize(Appearance.colors.colLayer1Hover, 0.5)
-                                    colBackgroundHover: Appearance.zzzEverywhere
+                                    colBackgroundHover: Appearance.regaliaEverywhere
+                                        ? Appearance.regalia.surfacePlateHover
+                                        : Appearance.zzzEverywhere
                                         ? Appearance.zzz.paperAlt
                                         : Appearance.colors.colLayer1Hover
 
@@ -964,8 +971,10 @@ ApplicationWindow {
                                             MaterialSymbol {
                                                 text: navItem.modelData.icon || ""
                                                 iconSize: 18
-                                                color: navBtn.toggled
-                                                    ? (Appearance.zzzEverywhere
+                                                color: navBtn.toggled || (Appearance.regaliaEverywhere && navBtn.buttonHovered)
+                                                    ? (Appearance.regaliaEverywhere
+                                                        ? Appearance.regalia.hardwarePrimary
+                                                        : Appearance.zzzEverywhere
                                                         ? Appearance.zzz.ink
                                                         : Appearance.inirEverywhere
                                                         ? Appearance.inir.colAccent
@@ -987,8 +996,10 @@ ApplicationWindow {
                                                     pixelSize: Appearance.font.pixelSize.small
                                                     weight: navBtn.toggled ? Font.Medium : Font.Normal
                                                 }
-                                                color: navBtn.toggled
-                                                    ? Appearance.colors.colOnLayer1
+                                                color: navBtn.toggled || (Appearance.regaliaEverywhere && navBtn.buttonHovered)
+                                                    ? (Appearance.regaliaEverywhere
+                                                        ? Appearance.regalia.onPrimaryPlate
+                                                        : Appearance.colors.colOnLayer1)
                                                     : Appearance.colors.colOnSurfaceVariant
                                                 elide: Text.ElideRight
 

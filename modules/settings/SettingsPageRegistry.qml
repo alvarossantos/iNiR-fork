@@ -923,6 +923,13 @@ Singleton {
         {
             pageIndex: 4, pageName: root.pages[4].name,
             section: Translation.tr("Global Style"),
+            label: Translation.tr("Regalia"),
+            description: Translation.tr("Luxury layered surfaces with optional wallpaper glass"),
+            keywords: ["regalia", "glass", "blur", "luxury", "layered", "surface", "rounding"]
+        },
+        {
+            pageIndex: 4, pageName: root.pages[4].name,
+            section: Translation.tr("Global Style"),
             label: Translation.tr("Inir"),
             description: Translation.tr("TUI-inspired style with accent borders"),
             keywords: ["inir", "tui", "terminal", "borders", "style", "minimal"]

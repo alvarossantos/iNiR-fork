@@ -11,12 +11,23 @@ import QtQuick.Controls
 TextField {
     id: root
     Material.theme: Material.System
-    Material.accent: Appearance.colors.colPrimary
+    Material.accent: Appearance.regaliaEverywhere ? "transparent" : Appearance.colors.colPrimary
     Material.primary: Appearance.colors.colPrimary
-    Material.background: Appearance.colors.colLayer1
-    Material.foreground: Appearance.colors.colOnSurface
-    Material.containerStyle: Material.Outlined
+    Material.background: Appearance.regaliaEverywhere ? "transparent" : Appearance.colors.colLayer1
+    Material.foreground: Appearance.regaliaEverywhere ? Appearance.regalia.onColor : Appearance.colors.colOnSurface
+    Material.containerStyle: Appearance.regaliaEverywhere ? Material.Filled : Material.Outlined
     renderType: Text.NativeRendering
+
+    RegaliaControlFace {
+        anchors.fill: parent
+        z: -0.5
+        visible: Appearance.regaliaEverywhere
+        fillColor: root.activeFocus
+            ? Appearance.regalia.controlPlateHover
+            : Appearance.regalia.controlPlate
+        radius: Appearance.regalia.roundSmall
+        hovered: root.hovered && !root.activeFocus
+    }
 
     // Settings search integration
     property bool enableSettingsSearch: true
@@ -85,9 +96,9 @@ TextField {
         }
     }
 
-    selectedTextColor: Appearance.colors.colOnSecondaryContainer
-    selectionColor: Appearance.colors.colSecondaryContainer
-    placeholderTextColor: Appearance.colors.colOutline
+    selectedTextColor: Appearance.regaliaEverywhere ? Appearance.regalia.primaryPlateInk : Appearance.colors.colOnSecondaryContainer
+    selectionColor: Appearance.regaliaEverywhere ? Appearance.regalia.primaryPlate : Appearance.colors.colSecondaryContainer
+    placeholderTextColor: Appearance.regaliaEverywhere ? Appearance.regalia.onMuted : Appearance.colors.colOutline
     clip: true
 
     font {

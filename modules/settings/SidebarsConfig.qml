@@ -768,6 +768,32 @@ ContentPage {
             }
 
             ContentSubsection {
+                title: Translation.tr("Side edge open")
+                tooltip: Translation.tr("Open the left or right sidebar by touching that screen edge")
+
+                ConfigRow {
+                    uniform: true
+                    SettingsSwitch {
+                        buttonIcon: "dock_to_left"
+                        text: Translation.tr("Hover screen edges")
+                        checked: Config.options?.sidebar?.edgeOpen?.enable ?? false
+                        onCheckedChanged: Config.setNestedValue("sidebar.edgeOpen.enable", checked)
+                    }
+                    ConfigSpinBox {
+                        icon: "width"
+                        text: Translation.tr("Trigger width (px)")
+                        value: Config.options?.sidebar?.edgeOpen?.regionWidth ?? 2
+                        from: 1
+                        to: 12
+                        stepSize: 1
+                        enabled: Config.options?.sidebar?.edgeOpen?.enable ?? false
+                        opacity: enabled ? 1 : 0.5
+                        onValueChanged: Config.setNestedValue("sidebar.edgeOpen.regionWidth", value)
+                    }
+                }
+            }
+
+            ContentSubsection {
                 title: Translation.tr("Corner open")
                 tooltip: Translation.tr("Allows you to open sidebars by clicking or hovering screen corners regardless of bar position")
                 ConfigRow {

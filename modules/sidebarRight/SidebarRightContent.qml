@@ -428,6 +428,7 @@ Item {
             (Config.options?.sidebar?.style ?? "panel") === "island" ? "island" : "")
         readonly property bool islandStyle: surfaceDialect === "island"
         readonly property bool zzzEverywhere: surfaceDialect === "zzz"
+        readonly property bool regaliaEverywhere: surfaceDialect === "regalia"
         readonly property bool angelEverywhere: surfaceDialect === "angel"
         readonly property bool auroraEverywhere: surfaceDialect === "aurora" || angelEverywhere
         readonly property bool inirEverywhere: surfaceDialect === "inir"
@@ -458,15 +459,18 @@ Item {
 
         color: (gameModeMinimal || islandStyle) ? "transparent"
             : zzzEverywhere ? Appearance.zzz.chrome
+            : regaliaEverywhere ? "transparent"
             : inirEverywhere ? (cardStyle ? Appearance.inir.colLayer1 : Appearance.inir.colLayer0)
             : auroraEverywhere ? ColorUtils.applyAlpha((blendedColors?.colLayer0 ?? Appearance.colors.colLayer0), 1)
             : (cardStyle ? Appearance.colors.colLayer1 : Appearance.colors.colLayer0)
-        border.width: (gameModeMinimal || islandStyle) ? 0 : (zzzEverywhere ? 1 : (angelEverywhere ? Appearance.angel.panelBorderWidth : 1))
-        border.color: zzzEverywhere ? Appearance.zzz.hairline
+        border.width: (gameModeMinimal || islandStyle || regaliaEverywhere) ? 0 : (zzzEverywhere ? 1 : (angelEverywhere ? Appearance.angel.panelBorderWidth : 1))
+        border.color: regaliaEverywhere ? "transparent"
+            : zzzEverywhere ? Appearance.zzz.hairline
             : angelEverywhere ? Appearance.angel.colPanelBorder
             : inirEverywhere ? Appearance.inir.colBorder
             : Appearance.colors.colLayer0Border
         radius: zzzEverywhere ? Appearance.zzz.panelRadius
+            : regaliaEverywhere ? Appearance.regalia.panelRadius
             : angelEverywhere ? Appearance.angel.roundingNormal
             : inirEverywhere ? (cardStyle ? Appearance.inir.roundingLarge : Appearance.inir.roundingNormal)
             : cardStyle ? Appearance.rounding.normal : (Appearance.rounding.screenRounding - Appearance.sizes.hyprlandGapsOut + 1)
@@ -486,6 +490,17 @@ Item {
         Behavior on color {
             enabled: Appearance.animationsEnabled
             ColorAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Appearance.animation.elementMoveFast.type; easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve }
+        }
+
+        RegaliaPlate {
+            anchors.fill: parent
+            visible: sidebarRightBackground.regaliaEverywhere
+            fillColor: sidebarRightBackground.cardStyle ? Appearance.regalia.chassis1 : Appearance.regalia.bg0
+            radius: sidebarRightBackground.radius
+            inset: Appearance.regalia.panelInset
+            elevated: sidebarRightBackground.cardStyle
+            deepFrame: !sidebarRightBackground.cardStyle
+            glassEnabled: true
         }
 
         clip: true

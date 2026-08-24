@@ -6,6 +6,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Mpris
+import Quickshell.Services.Pipewire
 import qs
 import qs.modules.common
 import qs.modules.common.functions
@@ -82,6 +83,52 @@ Singleton {
 	
 	property MprisPlayer trackedPlayer: null;
 	property bool _manualPlayerSelection: false;
+	property var _streamMetadataById: ({})
+
+	Timer {
+		id: _streamMetadataRefresh
+		interval: 120
+		repeat: false
+		onTriggered: {
+			if (!_streamMetadataProc.running)
+				_streamMetadataProc.running = true
+		}
+	}
+
+	Process {
+		id: _streamMetadataProc
+		command: ["pw-dump"]
+		stdout: StdioCollector { id: _streamMetadataCollector }
+		onExited: (exitCode, _exitStatus) => {
+			if (exitCode !== 0) return
+			try {
+				const data = JSON.parse(_streamMetadataCollector.text ?? "[]")
+				const next = {}
+				for (const item of data) {
+					if (item?.type !== "PipeWire:Interface:Node") continue
+					const props = item?.info?.props ?? {}
+					if (props["media.class"] !== "Stream/Output/Audio") continue
+					const id = Number(item?.id ?? 0)
+					if (!Number.isFinite(id) || id <= 0) continue
+					next[id] = {
+						appName: props["application.name"] ?? "",
+						appId: props["application.id"] ?? "",
+						binary: props["application.process.binary"] ?? "",
+						nodeName: props["node.name"] ?? "",
+						mediaName: props["media.name"] ?? ""
+					}
+				}
+				root._streamMetadataById = next
+			} catch (e) {
+				console.warn("[MprisController] Failed to parse PipeWire stream metadata:", e)
+			}
+		}
+	}
+
+	Connections {
+		target: Audio
+		function onOutputAppNodesChanged(): void { _streamMetadataRefresh.restart() }
+	}
 	
 	// Reactive counter that forces re-evaluation when any player's state changes
 	property int _playbackStateVersion: 0
@@ -143,7 +190,10 @@ Singleton {
 		onTriggered: plasmaIntegrationCheckProc.running = true
 	}
 
-	Component.onCompleted: plasmaCheckDefer.start()
+	Component.onCompleted: {
+		_streamMetadataRefresh.start()
+		plasmaCheckDefer.start()
+	}
 
 	Connections {
 		target: Config
@@ -769,6 +819,7 @@ Singleton {
 
 		function onTrackTitleChanged() {
 			root.updateTrack();
+			_streamMetadataRefresh.restart();
 		}
 
 		function onTrackArtistChanged() {
@@ -840,23 +891,116 @@ Singleton {
 		}
 	}
 
-	property bool canChangeVolume: (root.isYtMusicActive && YtMusic.currentVideoId) ||
-		(this.activePlayer && this.activePlayer.volumeSupported && this.activePlayer.canControl);
+	function _volumeKey(value): string {
+		return String(value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+	}
+
+	function _volumeTokens(value): var {
+		return String(value ?? "").toLowerCase().split(/[^a-z0-9]+/g)
+			.filter(token => token.length >= 3);
+	}
+
+	function _streamMatchScore(player: MprisPlayer, node): int {
+		if (!player || !node) return 0;
+		const props = node.properties ?? {};
+		const meta = root._streamMetadataById[Number(node.id ?? 0)] ?? {};
+		const mediaName = String(meta.mediaName ?? props["media.name"] ?? "");
+		const title = String(player.trackTitle ?? "");
+		const titleKey = root._volumeKey(title);
+		const mediaKey = root._volumeKey(mediaName);
+		let score = 0;
+		if (titleKey.length >= 4 && mediaKey.length >= 4) {
+			if (titleKey === mediaKey) score += 120;
+			else if (titleKey.includes(mediaKey) || mediaKey.includes(titleKey)) score += 80;
+		}
+
+		const playerValues = [
+			player.identity,
+			player.desktopEntry,
+			String(player.dbusName ?? "").replace(/^org\.mpris\.MediaPlayer2\./, "")
+		];
+		const nodeValues = [
+			meta.appName,
+			meta.appId,
+			meta.binary,
+			meta.nodeName,
+			node.name,
+			node.description,
+			node.nickname,
+			props["application.name"],
+			props["application.id"],
+			props["application.process.binary"],
+			props["node.name"]
+		];
+		for (const pv of playerValues) {
+			const pk = root._volumeKey(pv);
+			if (!pk) continue;
+			const pt = root._volumeTokens(pv);
+			let candidateScore = 0;
+			for (const nv of nodeValues) {
+				const nk = root._volumeKey(nv);
+				if (!nk) continue;
+				if (pk === nk) candidateScore = Math.max(candidateScore, 60);
+				else if (pk.length >= 4 && nk.length >= 4 && (pk.includes(nk) || nk.includes(pk)))
+					candidateScore = Math.max(candidateScore, 45);
+				const nt = root._volumeTokens(nv);
+				let overlap = 0;
+				for (const token of pt) if (nt.includes(token)) overlap++;
+				if (overlap > 0) candidateScore = Math.max(candidateScore, overlap * 12);
+			}
+			score += candidateScore;
+		}
+		return score;
+	}
+
+	function streamNodeForPlayer(player: MprisPlayer): var {
+		if (!player) return null;
+		let best = null;
+		let bestScore = 0;
+		for (const node of Audio.outputAppNodes ?? []) {
+			const score = root._streamMatchScore(player, node);
+			if (score > bestScore) {
+				bestScore = score;
+				best = node;
+			}
+		}
+		return bestScore >= 12 ? best : null;
+	}
+
+	readonly property var activePlayerStreamNode: root.streamNodeForPlayer(root.activePlayer)
+	PwObjectTracker { objects: root.activePlayerStreamNode ? [root.activePlayerStreamNode] : [] }
+	readonly property real volume: {
+		if (root.isYtMusicActive && YtMusic.currentVideoId)
+			return YtMusic.getVolume();
+		const nodeVolume = root.activePlayerStreamNode?.audio?.volume;
+		if (nodeVolume !== undefined && nodeVolume !== null)
+			return Math.max(0, Math.min(1, nodeVolume));
+		return Math.max(0, Math.min(1, root.activePlayer?.volume ?? 0));
+	}
+	readonly property bool canChangeVolume: (root.isYtMusicActive && YtMusic.currentVideoId)
+		|| !!root.activePlayerStreamNode?.audio
+		|| !!(root.activePlayer && root.activePlayer.volumeSupported && root.activePlayer.canControl);
 
 	function getVolume(): real {
-		if (root.isYtMusicActive && YtMusic.currentVideoId) {
-			return YtMusic.getVolume();
-		}
-		return this.activePlayer?.volume ?? 0;
+		return root.volume;
 	}
 
 	function setVolume(vol: real): void {
 		const clamped = Math.max(0, Math.min(1, vol));
 		if (root.isYtMusicActive && YtMusic.currentVideoId) {
 			YtMusic.setVolume(clamped);
-		} else if (this.activePlayer && this.activePlayer.volumeSupported && this.activePlayer.canControl) {
-			this.activePlayer.volume = clamped;
+			return;
 		}
+		const node = root.activePlayerStreamNode;
+		if (node?.audio) {
+			node.audio.volume = clamped;
+			const nodeId = Number(node.id ?? 0);
+			if (Number.isFinite(nodeId) && nodeId > 0)
+				Quickshell.execDetached(["wpctl", "set-volume", String(nodeId), String(clamped)]);
+			return;
+		}
+		if (root.activePlayer && root.activePlayer.volumeSupported && root.activePlayer.canControl)
+			root.activePlayer.volume = clamped;
 	}
 
 	property bool loopSupported: this.activePlayer && this.activePlayer.loopSupported && this.activePlayer.canControl;

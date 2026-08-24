@@ -580,13 +580,14 @@ Scope {
                 width: Math.min(1040, Math.max(780, settingsPanel.width * 0.66))
                 height: Math.min(840, Math.max(600, settingsPanel.height * 0.82))
                 radius: Appearance.zzzEverywhere ? Appearance.zzz.panelRadius
+                      : Appearance.regaliaEverywhere ? Appearance.regalia.panelRadius
                       : Appearance.angelEverywhere ? Appearance.angel.roundingLarge
                       : Appearance.inirEverywhere ? Appearance.inir.roundingLarge
                       : Appearance.rounding.windowRounding
                 // Same contract as the rail overlay: backgroundOpacity lands on
                 // the fill alpha (solid) or the blur transparentize (glass),
                 // never on Item opacity, which children inherit.
-                color: Appearance.auroraEverywhere ? "transparent"
+                color: Appearance.auroraEverywhere || Appearance.regaliaEverywhere ? "transparent"
                      : CF.ColorUtils.applyAlpha(
                          Appearance.inirEverywhere ? Appearance.inir.colLayer0
                        : Appearance.zzzEverywhere ? Appearance.zzz.chrome
@@ -631,6 +632,18 @@ Scope {
                         easing.type: Appearance.animation.elementMoveFast.type
                         easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
                     }
+                }
+
+                RegaliaPlate {
+                    anchors.fill: parent
+                    z: -1
+                    visible: Appearance.regaliaEverywhere
+                    fillColor: CF.ColorUtils.applyAlpha(Appearance.regalia.bg0,
+                        card.panelBgOpacity)
+                    radius: card.radius
+                    inset: Appearance.regalia.panelInset
+                    elevated: true
+                    glassEnabled: true
                 }
 
                 GlassBackground {
@@ -715,7 +728,7 @@ Scope {
                     radius: SettingsMaterialPreset.cardRadius
                     color: Appearance.zzzEverywhere
                         ? "transparent" : SettingsMaterialPreset.cardColor
-                    border.width: Appearance.angelEverywhere || Appearance.zzzEverywhere ? 0 : 1
+                    border.width: Appearance.regaliaEverywhere || Appearance.angelEverywhere || Appearance.zzzEverywhere ? 0 : 1
                     border.color: SettingsMaterialPreset.cardBorderColor
                     clip: true
 

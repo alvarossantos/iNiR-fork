@@ -154,6 +154,7 @@ Item { // Bar content region
 
     readonly property bool inirEverywhere: root.surfaceDialect === "inir"
     readonly property bool angelEverywhere: root.surfaceDialect === "angel"
+    readonly property bool regaliaEverywhere: root.surfaceDialect === "regalia"
     readonly property bool auroraEverywhere: root.surfaceDialect === "aurora" || root.angelEverywhere
     // Bar appearance style: how the bar surface itself is drawn.
     //   classic — single full-width background (per cornerStyle, current default)
@@ -231,6 +232,7 @@ Item { // Bar content region
         Math.min(1, (Config.options?.bar?.visualizer?.accentStrength ?? 70) / 100))
     readonly property color barSpectrumColor: root.inirEverywhere ? Appearance.inir.colPrimary
         : root.zzzEverywhere ? Appearance.zzz.accent
+        : root.regaliaEverywhere ? Appearance.regalia.hardwarePrimary
         : (root.blendedColors?.colPrimary ?? Appearance.colors.colPrimary)
 
     CavaProcess {
@@ -655,7 +657,10 @@ Item { // Bar content region
         // without changing the global style). Applied as Item.opacity so border,
         // blurredWallpaper, inset glow and partial borders all fade together.
         // Widgets sit OUTSIDE this Rectangle so they stay fully opaque.
-        opacity: Math.max(0, Math.min(1, Config.options?.bar?.opacity ?? 1))
+        // Regalia is an opaque physical-material style. Preserve the user's
+        // persisted opacity for every other style instead of rewriting config.
+        opacity: root.regaliaEverywhere && root.barAppearance === "classic"
+            ? 1 : Math.max(0, Math.min(1, Config.options?.bar?.opacity ?? 1))
         Behavior on opacity {
             enabled: Appearance.animationsEnabled
             animation: NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Appearance.animation.elementMoveFast.type; easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve }
@@ -695,6 +700,9 @@ Item { // Bar content region
             if (root.isFrame || root.isScenic) {
                 return ColorUtils.transparentize(Appearance.colors.colLayer0, 1)
             }
+            if (root.regaliaEverywhere) {
+                return "transparent"
+            }
             if (root.angelEverywhere) {
                 const base = blendedColors?.colLayer0 ?? Appearance.colors.colLayer0
                 if (root.nativeBlurActive)
@@ -725,6 +733,19 @@ Item { // Bar content region
             }
         }
 
+        RegaliaPlate {
+            anchors.fill: parent
+            visible: root.regaliaEverywhere && !root.isFrame && !root.isScenic
+            fillColor: barBackground.floatingStyle ? Appearance.regalia.barSurfaceFloating
+                : Appearance.regalia.barSurface
+            radius: barBackground.radius
+            inset: barBackground.floatingStyle
+                ? Appearance.regalia.surfaceInset : Appearance.regalia.controlInset
+            elevated: barBackground.floatingStyle
+            deepFrame: !barBackground.floatingStyle
+            glassEnabled: true
+        }
+
         // Radius logic per global style and corner style
         radius: {
             if (root.isScenic) return 0
@@ -740,6 +761,9 @@ Item { // Bar content region
                 return root.angelEverywhere ? Appearance.angel.roundingNormal
                     : root.inirEverywhere ? Appearance.inir.roundingNormal
                     : Appearance.rounding.windowRounding
+            }
+            if (root.regaliaEverywhere) {
+                return (cornerStyle === 1 || cornerStyle === 3) ? Appearance.regalia.roundLarge : 0
             }
             if (root.angelEverywhere) {
                 return (cornerStyle === 1 || cornerStyle === 3) ? Appearance.angel.roundingNormal : 0
@@ -794,6 +818,7 @@ Item { // Bar content region
         border.width: {
             if (root.isScenic) return 0
             if (root.zzzEverywhere) return 1
+            if (root.regaliaEverywhere) return 0
             if (root.isFrame) return root.angelEverywhere ? Appearance.angel.panelBorderWidth : 1
             if (root.angelEverywhere) return Appearance.angel.panelBorderWidth
             if (root.inirEverywhere) {
@@ -814,6 +839,7 @@ Item { // Bar content region
         }
         border.color: {
             if (root.zzzEverywhere) return Appearance.zzz.hairline
+            if (root.regaliaEverywhere) return "transparent"
             // Frame is defined by its outline — use the visible outline token
             if (root.isFrame && !root.angelEverywhere && !root.inirEverywhere) {
                 return Appearance.colors.colOutlineVariant
@@ -1398,7 +1424,8 @@ Item { // Bar content region
             implicitWidth: indicatorsRowLayout.implicitWidth + (root.isIslands ? 7 : 10) * 2
             implicitHeight: indicatorsRowLayout.implicitHeight + (root.isIslands ? 2 : 5) * 2
 
-            buttonRadius: root.zzzEverywhere ? Appearance.zzz.controlRadius : Appearance.rounding.full
+            buttonRadius: root.regaliaEverywhere ? Appearance.regalia.controlRadius
+                : root.zzzEverywhere ? Appearance.zzz.controlRadius : Appearance.rounding.full
 
             // zzz: transparent everywhere on this Control's own background —
             // the ZzzPlate below is the only hover/toggle surface. Matches
@@ -1412,9 +1439,11 @@ Item { // Bar content region
                 : root.auroraEverywhere ? Appearance.aurora.colSubSurfaceHover : Appearance.colors.colLayer1Hover
             colRipple: root.zzzEverywhere ? ColorUtils.applyAlpha(Appearance.zzz.accent, 0.20)
                 : root.auroraEverywhere ? Appearance.aurora.colSubSurfaceActive : Appearance.colors.colLayer1Active
-            colBackgroundToggled: root.zzzEverywhere ? "transparent"
+            colBackgroundToggled: root.regaliaEverywhere ? Appearance.regalia.primaryPlate
+                : root.zzzEverywhere ? "transparent"
                 : root.auroraEverywhere ? Appearance.aurora.colElevatedSurface : Appearance.colors.colSecondaryContainer
-            colBackgroundToggledHover: root.zzzEverywhere ? "transparent"
+            colBackgroundToggledHover: root.regaliaEverywhere ? Appearance.regalia.primaryPlateHover
+                : root.zzzEverywhere ? "transparent"
                 : root.auroraEverywhere ? Appearance.aurora.colElevatedSurfaceHover : Appearance.colors.colSecondaryContainerHover
             colRippleToggled: root.zzzEverywhere ? ColorUtils.applyAlpha(Appearance.zzz.accent, 0.20)
                 : root.auroraEverywhere ? Appearance.aurora.colSubSurfaceActive : Appearance.colors.colSecondaryContainerActive
@@ -1434,7 +1463,9 @@ Item { // Bar content region
             }
 
             toggled: ShellLayoutController.sidebarOpenAtSlot("right")
-            property color colText: root.zzzEverywhere
+            property color colText: root.regaliaEverywhere
+                ? (toggled ? Appearance.regalia.primaryPlateInk : Appearance.regalia.onColor)
+                : root.zzzEverywhere
                 ? (toggled ? Appearance.zzz.onAccentSoft : Appearance.zzz.ink)
                 : toggled ? Appearance.colors.colOnSecondaryContainer : Appearance.colors.colOnLayer0
 

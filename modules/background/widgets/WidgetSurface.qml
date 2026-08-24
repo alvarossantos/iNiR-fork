@@ -22,6 +22,7 @@ Rectangle {
     property real surfaceBorderWidth: 1
     property real surfaceBorderOpacity: 0.08
     property color surfaceColor: Appearance.colors.colOnLayer0
+    property color surfaceFill: Appearance.colors.colLayer1
     // Auto preserves each global style's native plate. Explicit ink modes
     // force the opposite plate polarity so the selected ink remains visible.
     property string colorMode: "auto"
@@ -53,9 +54,10 @@ Rectangle {
     readonly property bool _inir: Appearance.inirEverywhere
     readonly property bool _zzz: Appearance.zzzEverywhere
     readonly property bool _cookie: Appearance.cookieEverywhere
+    readonly property bool _regalia: Appearance.regaliaEverywhere
     // Ricelin island dialect is an optional widget skin, but it must not
     // override a selected global style with its own surface worldview.
-    readonly property bool _island: !root._zzz && !root._cookie && !root._angel
+    readonly property bool _island: !root._zzz && !root._cookie && !root._regalia && !root._angel
         && !root._aurora && !root._inir
         && (Config.options?.background?.widgets?.style ?? "panel") === "island"
     readonly property real _surfaceStrength: Math.max(0, Math.min(1, Number(root.surfaceOpacity) || 0))
@@ -97,11 +99,12 @@ Rectangle {
     // region, where a light card would read as glare.
     readonly property bool _plateIsDark: root.colorMode === "light" ? true
         : root.colorMode === "dark" ? false
-        : Appearance.m3colors.darkmode || root._regionBright
+        : ColorUtils.relativeLuminance(root.surfaceFill) < 0.38
     readonly property color _plate: root._plateIsDark ? root._plateDark : root._plateLight
-    readonly property color _flatFill: ColorUtils.applyAlpha(root._plate, root._plateAlpha)
+    readonly property color _flatFill: ColorUtils.applyAlpha(
+        root.colorMode === "auto" ? root.surfaceFill : root._plate, root._plateAlpha)
     readonly property color _cookieFillBase: root.colorMode === "auto"
-        ? Appearance.colors.colLayer2 : root._plate
+        ? root.surfaceFill : root._plate
     readonly property color _cookieFill: root._backgroundVisible
         ? ColorUtils.applyAlpha(root._cookieFillBase, root._plateAlpha)
         : "transparent"
@@ -110,6 +113,7 @@ Rectangle {
     readonly property string surfaceReport: JSON.stringify({
         style: root._cookie ? "cookie"
             : root._zzz ? "zzz"
+            : root._regalia ? "regalia"
             : root._island ? "island"
             : root._angel ? "angel"
             : root._aurora ? "aurora"
@@ -123,7 +127,7 @@ Rectangle {
         borderWidth: root.surfaceBorderWidth,
         borderOpacity: root.surfaceBorderOpacity,
         radius: root.radius,
-        fill: String(root._cookie ? root._cookieFill : root.color)
+        fill: String(root._cookie ? root._cookieFill : root._flatFill)
     })
 
     radius: surfaceRadius
@@ -131,6 +135,7 @@ Rectangle {
         : _glass ? "transparent"
         : _zzz ? "transparent"
         : _cookie ? "transparent"
+        : _regalia ? "transparent"
         : _inir ? "transparent"
         : root._backgroundVisible ? _flatFill : "transparent"
     border.width: 0
@@ -196,7 +201,7 @@ Rectangle {
         anchors.fill: parent
         radius: root.radius
         color: "transparent"
-        visible: !root._zzz && !root._cookie && !root._island && !root._angel
+        visible: !root._zzz && !root._cookie && !root._regalia && !root._island && !root._angel
             && root.surfaceBorderWidth > 0 && root.surfaceBorderOpacity > 0
         border.width: root.surfaceBorderWidth
         border.color: root._inir
@@ -207,6 +212,17 @@ Rectangle {
                 : ColorUtils.applyAlpha(
                     ColorUtils.ensureReadable(root.surfaceAccent, root._flatFill, 3),
                     Math.min(1, root.surfaceBorderOpacity * 2))
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        visible: root._regalia && root.surfaceBorderWidth > 0
+            && root.surfaceBorderOpacity > 0
+        radius: root.radius
+        color: "transparent"
+        border.width: root.surfaceBorderWidth
+        border.color: ColorUtils.applyAlpha(root.surfaceColor,
+            Math.min(0.45, root.surfaceBorderOpacity * 0.6))
     }
 
     // Removed: the ZZZ accent registration tick. Every fix to keep it inside
@@ -314,6 +330,21 @@ Rectangle {
         borderWidth: Math.max(1, root.surfaceBorderWidth)
         borderColor: ColorUtils.applyAlpha(Appearance.angel.colBorder,
             root.surfaceBorderOpacity)
+    }
+
+    // Regalia desktop widgets use the same fitted chassis/content construction
+    // as shell panels. The widget remains one visual object, but no longer reads
+    // as a generic card with a different fill.
+    RegaliaPlate {
+        id: regaliaCard
+        anchors.fill: parent
+        visible: root._regalia && root._backgroundVisible
+        radius: root.radius
+        fillColor: ColorUtils.applyAlpha(
+            root.colorMode === "auto" ? root.surfaceFill : root._plate,
+            root._plateAlpha)
+        inset: Appearance.regalia.surfaceInset
+        elevated: true
     }
 
     // Inir subtle fill

@@ -73,6 +73,14 @@
             "glassBlur": 1
         },
         "iiMotionProfile": "classic",
+        "regalia": {
+            "glass": true,
+            "glassBlur": 0.72,
+            "glassTintTransparency": 0.52,
+            "glassSurfaceOpacity": 0.60,
+            "glassSaturation": 0.12,
+            "radiusScale": 1.0
+        },
         "aurora": {
             "transparency": {
                 "overlay": 0.38,
@@ -106,6 +114,7 @@
             "aurora": 0,
             "inir": 1,
             "angel": 1,
+            "regalia": 1,
             "zzz": 0,
             "cookie": 1
         },
@@ -1480,6 +1489,10 @@
             "valueScroll": true,
             "visualize": true
         },
+        "edgeOpen": {
+            "enable": false,
+            "regionWidth": 2
+        },
         "style": "panel",
         "cardStyle": false,
         "keepRightSidebarLoaded": true,
@@ -1649,6 +1662,7 @@
         "wallhaven": {
             "enable": true,
             "limit": 24,
+            "fitMode": "auto",
             "apiKey": ""
         },
         "news": {

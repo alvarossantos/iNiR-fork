@@ -1566,6 +1566,7 @@ ContentPage {
                         { displayName: Translation.tr("Aurora"), icon: "blur_on", value: "aurora" },
                         { displayName: Translation.tr("Inir"), icon: "terminal", value: "inir" },
                         { displayName: Translation.tr("Angel"), icon: "raven", value: "angel" },
+                        { displayName: Translation.tr("Regalia"), icon: "event_seat", value: "regalia" },
                         { displayName: Translation.tr("ZZZ"), icon: "bolt", value: "zzz" },
                         { displayName: Translation.tr("Cookie Shapes"), icon: "cookie", value: "cookie" }
                     ]
@@ -1608,6 +1609,22 @@ ContentPage {
                 Layout.fillWidth: true
                 active: angelStyleEditorSection.expanded && Appearance.angelEverywhere
                 source: "AngelStyleEditor.qml"
+            }
+        }
+    }
+
+    SettingsCardSection {
+        id: regaliaStyleEditorSection
+        visible: Appearance.regaliaEverywhere
+        expanded: false
+        icon: "event_seat"
+        title: Translation.tr("Regalia Style Editor")
+
+        SettingsGroup {
+            Loader {
+                Layout.fillWidth: true
+                active: regaliaStyleEditorSection.expanded && Appearance.regaliaEverywhere
+                source: "RegaliaStyleEditor.qml"
             }
         }
     }

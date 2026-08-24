@@ -45,7 +45,7 @@ Item {
         id: _cascadeConnections
         target: GlobalStates
         function onControlPanelOpenChanged() {
-            if (GlobalStates.controlPanelOpen) {
+            if (GlobalStates.controlPanelOpen && !root.regaliaEverywhere) {
                 root._entranceCascade = -1
                 _entranceCascadeTimer.start()
             }
@@ -53,6 +53,7 @@ Item {
     }
     
     readonly property bool zzzEverywhere: Appearance.zzzEverywhere
+    readonly property bool regaliaEverywhere: Appearance.regaliaEverywhere
     readonly property bool inirEverywhere: Appearance.inirEverywhere
     readonly property bool angelEverywhere: Appearance.angelEverywhere
     readonly property bool auroraEverywhere: Appearance.auroraEverywhere
@@ -86,6 +87,7 @@ Item {
         implicitHeight: flickable.contentHeight + (root.compactMode ? 20 : 24)
 
         color: root.zzzEverywhere ? Appearance.zzz.bg0
+             : root.regaliaEverywhere ? "transparent"
              : root.inirEverywhere ? Appearance.inir.colLayer0
              : root.auroraEverywhere ? ColorUtils.applyAlpha((root.blendedColors?.colLayer0 ?? Appearance.colors.colLayer0), 1)
              : Appearance.colors.colLayer0
@@ -94,12 +96,13 @@ Item {
             ColorAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Appearance.animation.elementMoveFast.type; easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve }
         }
         radius: root.zzzEverywhere ? 0
+            : root.regaliaEverywhere ? Appearance.regalia.panelRadius
             : root.angelEverywhere ? Appearance.angel.roundingLarge
             : root.inirEverywhere ? Appearance.inir.roundingLarge
             : Appearance.rounding.large
 
-        border.width: root.zzzEverywhere ? 0 : (root.inirEverywhere ? 1 : (root.auroraEverywhere ? 1 : 1))
-        border.color: root.zzzEverywhere ? "transparent"
+        border.width: root.regaliaEverywhere || root.zzzEverywhere ? 0 : (root.inirEverywhere ? 1 : (root.auroraEverywhere ? 1 : 1))
+        border.color: root.zzzEverywhere || root.regaliaEverywhere ? "transparent"
                     : root.angelEverywhere ? Appearance.angel.colBorder
                     : root.inirEverywhere ? Appearance.inir.colBorder
                     : root.auroraEverywhere ? Appearance.aurora.colTooltipBorder
@@ -116,6 +119,17 @@ Item {
         Behavior on border.color {
             enabled: Appearance.animationsEnabled
             ColorAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Appearance.animation.elementMoveFast.type; easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve }
+        }
+
+        RegaliaPlate {
+            anchors.fill: parent
+            visible: root.regaliaEverywhere
+            fillColor: Appearance.regalia.bg0
+            radius: background.radius
+            inset: Appearance.regalia.panelInset
+            deepFrame: true
+            elevated: true
+            glassEnabled: true
         }
         
         clip: true
@@ -225,22 +239,22 @@ Item {
 
                 // Header with User Profile
                 ProfileHeader {
-                    opacity: root._entranceCascade >= 0 ? 1 : 0
-                    Behavior on opacity { enabled: Appearance.animationsEnabled; NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Easing.OutCubic } }
+                    opacity: root.regaliaEverywhere || root._entranceCascade >= 0 ? 1 : 0
+                    Behavior on opacity { enabled: Appearance.animationsEnabled && !root.regaliaEverywhere; NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Easing.OutCubic } }
                 }
 
                 // Date/Time header
                 DateTimeHeader {
-                    opacity: root._entranceCascade >= 1 ? 1 : 0
-                    Behavior on opacity { enabled: Appearance.animationsEnabled; NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Easing.OutCubic } }
+                    opacity: root.regaliaEverywhere || root._entranceCascade >= 1 ? 1 : 0
+                    Behavior on opacity { enabled: Appearance.animationsEnabled && !root.regaliaEverywhere; NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Easing.OutCubic } }
                 }
 
                 // Media Section
                 Loader {
                     Layout.fillWidth: true
                     active: root.showMediaSection
-                    opacity: root._entranceCascade >= 2 ? 1 : 0
-                    Behavior on opacity { enabled: Appearance.animationsEnabled; NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Easing.OutCubic } }
+                    opacity: root.regaliaEverywhere || root._entranceCascade >= 2 ? 1 : 0
+                    Behavior on opacity { enabled: Appearance.animationsEnabled && !root.regaliaEverywhere; NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Easing.OutCubic } }
                     sourceComponent: Component { MediaSection {} }
                 }
 
@@ -248,8 +262,8 @@ Item {
                 Loader {
                     Layout.fillWidth: true
                     active: root.showWallpaperSection
-                    opacity: root._entranceCascade >= 3 ? 1 : 0
-                    Behavior on opacity { enabled: Appearance.animationsEnabled; NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Easing.OutCubic } }
+                    opacity: root.regaliaEverywhere || root._entranceCascade >= 3 ? 1 : 0
+                    Behavior on opacity { enabled: Appearance.animationsEnabled && !root.regaliaEverywhere; NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Easing.OutCubic } }
                     sourceComponent: Component { WallpaperSection {} }
                 }
 
@@ -257,8 +271,8 @@ Item {
                 Loader {
                     Layout.fillWidth: true
                     active: root.showWeatherSection
-                    opacity: root._entranceCascade >= 4 ? 1 : 0
-                    Behavior on opacity { enabled: Appearance.animationsEnabled; NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Easing.OutCubic } }
+                    opacity: root.regaliaEverywhere || root._entranceCascade >= 4 ? 1 : 0
+                    Behavior on opacity { enabled: Appearance.animationsEnabled && !root.regaliaEverywhere; NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Easing.OutCubic } }
                     sourceComponent: Component { WeatherSection {} }
                 }
 
@@ -266,8 +280,8 @@ Item {
                 Loader {
                     Layout.fillWidth: true
                     active: root.showSystemSection
-                    opacity: root._entranceCascade >= 5 ? 1 : 0
-                    Behavior on opacity { enabled: Appearance.animationsEnabled; NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Easing.OutCubic } }
+                    opacity: root.regaliaEverywhere || root._entranceCascade >= 5 ? 1 : 0
+                    Behavior on opacity { enabled: Appearance.animationsEnabled && !root.regaliaEverywhere; NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Easing.OutCubic } }
                     sourceComponent: Component { SystemSection {} }
                 }
 
@@ -275,8 +289,8 @@ Item {
                 Loader {
                     Layout.fillWidth: true
                     active: root.showSlidersSection
-                    opacity: root._entranceCascade >= 6 ? 1 : 0
-                    Behavior on opacity { enabled: Appearance.animationsEnabled; NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Easing.OutCubic } }
+                    opacity: root.regaliaEverywhere || root._entranceCascade >= 6 ? 1 : 0
+                    Behavior on opacity { enabled: Appearance.animationsEnabled && !root.regaliaEverywhere; NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Easing.OutCubic } }
                     sourceComponent: Component { SlidersSection {} }
                 }
 
@@ -284,8 +298,8 @@ Item {
                 Loader {
                     Layout.fillWidth: true
                     active: root.showQuickActionsSection
-                    opacity: root._entranceCascade >= 7 ? 1 : 0
-                    Behavior on opacity { enabled: Appearance.animationsEnabled; NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Easing.OutCubic } }
+                    opacity: root.regaliaEverywhere || root._entranceCascade >= 7 ? 1 : 0
+                    Behavior on opacity { enabled: Appearance.animationsEnabled && !root.regaliaEverywhere; NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Easing.OutCubic } }
                     sourceComponent: Component { QuickActionsSection {} }
                 }
 

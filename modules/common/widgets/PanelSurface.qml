@@ -14,6 +14,7 @@ import qs.modules.common.functions
 // antes estaba copiada y divergente en cada panel:
 //   zzz    → placa con esquina cortada (chamfer) + hairline (look consola/poster)
 //   angel  → tarjeta de vidrio
+//   regalia→ tile sólido: jerarquía por masa/color, sin marcos ornamentales
 //   inir   → capa plana con borde fino
 //   aurora → sub-superficie translúcida
 //   material/cards → rectángulo redondeado con el color de capa
@@ -72,6 +73,7 @@ Item {
         ? root.surfaceDialect : Appearance.globalStyle
     readonly property bool _zzz: root._resolvedDialect === "zzz"
     readonly property bool _angel: root._resolvedDialect === "angel"
+    readonly property bool _regalia: root._resolvedDialect === "regalia"
     readonly property bool _inir: root._resolvedDialect === "inir"
     readonly property bool _aurora: root._resolvedDialect === "aurora" || root._angel
     readonly property bool _cookie: root._resolvedDialect === "cookie"
@@ -87,6 +89,10 @@ Item {
     // ── Color de fondo (misma elección que hacían los paneles a mano) ──
     readonly property color _fill: root.borderless ? "transparent"
         : root._angel ? Appearance.angel.colGlassCard
+        : root._regalia ? (root.elevation <= 0 ? Appearance.regalia.bg0
+            : root.elevation === 1 ? Appearance.regalia.bg1
+            : root.elevation === 2 ? Appearance.regalia.bg2
+            : root.elevation === 3 ? Appearance.regalia.bg3 : Appearance.regalia.bg4)
         : root._inir ? (root.elevation <= 0 ? Appearance.inir.colLayer0 : Appearance.inir.colLayer1)
         : root._aurora ? Appearance.aurora.colSubSurface
         : (root.elevation <= 0 ? Appearance.colors.colLayer0
@@ -100,6 +106,7 @@ Item {
         : root._island ? (Config.options?.appearance?.island?.radius ?? 18)
         : root.island ? Math.min(width, height) / 2
         : root._angel ? Appearance.angel.roundingSmall
+        : root._regalia ? Appearance.regalia.roundNormal
         : root._inir ? Appearance.inir.roundingNormal
         : (root.cardStyle ? Appearance.rounding.normal : Appearance.rounding.small)
 
@@ -107,9 +114,11 @@ Item {
     readonly property int _borderWidth: (root.borderless || !root.outlined) ? 0
         : root.island ? 1
         : root._angel ? Appearance.angel.cardBorderWidth
+        : root._regalia ? 0
         : root._inir ? 1
         : (root.cardStyle ? 1 : 0)
     readonly property color _borderColor: root._angel ? Appearance.angel.colCardBorder
+        : root._regalia ? "transparent"
         : root._inir ? Appearance.inir.colBorder
         : Appearance.colors.colLayer0Border
 
@@ -174,11 +183,22 @@ Item {
         }
     }
 
+    // ── Regalia: fitted shell composition. The hard chassis contains a
+    // recessed semantic field instead of recoloring the generic Material rectangle.
+    RegaliaPlate {
+        id: regaliaFace
+        anchors.fill: parent
+        visible: root._regalia && !root.borderless
+        radius: root._radius
+        fillColor: root._fill
+        elevated: root.elevation >= 2
+    }
+
     // ── Cara resto (y zzz transparente): rectángulo redondeado ──
     Rectangle {
         anchors.fill: parent
         visible: !(root._zzz && root.zzzChamfer && !root.borderless)
-            && !root._island && !root._cookie
+            && !root._island && !root._cookie && !root._regalia
         color: root._zzz ? "transparent" : root._fill
         radius: root._zzz ? Appearance.zzz.cardRadius : root._radius
         border.width: root._zzz ? 0 : root._borderWidth

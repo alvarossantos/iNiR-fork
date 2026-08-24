@@ -31,7 +31,8 @@ Item {
     // Islands: the capsule needs real breathing room around content (matches
     // the edge islands' inner padding); classic groups keep the tight fit and
     // bare chips (no surface of their own) don't pad like a capsule.
-    property real padding: islandStyle && !bare ? 12 : 8
+    property real padding: islandStyle && !bare ? 12
+        : Appearance.regaliaEverywhere && !bare ? Appearance.regalia.tilePadding : 8
     readonly property bool cardStyleEverywhere: (Config.options?.dock?.cardStyle ?? false) && (Config.options?.sidebar?.cardStyle ?? false) && (Config.options?.bar?.cornerStyle === 3)
     // Islands bar appearance: each group is its own floating surface
     readonly property bool islandStyle: !vertical && (Config.options?.bar?.appearanceStyle ?? "classic") === "islands"
@@ -79,8 +80,10 @@ Item {
         }
         visible: !root.islandStyle && !root.bare
         cardStyle: root.cardStyleEverywhere
-        borderless: !root.islandStyle && (Config.options?.bar?.borderless ?? false)
-        elevation: 1
+        borderless: Appearance.regaliaEverywhere ? false
+            : !root.islandStyle && (Config.options?.bar?.borderless ?? false)
+        radiusOverride: Appearance.regaliaEverywhere ? Appearance.regalia.roundSmall : -1
+        elevation: Appearance.regaliaEverywhere ? 2 : 1
         // En zzz la barra mantiene su contorno unificado; los grupos quedan transparentes.
         zzzChamfer: false
     }

@@ -566,6 +566,7 @@ Scope {
                 width: maxCardWidth
                 height: maxCardHeight
                 radius: Appearance.zzzEverywhere ? Appearance.zzz.panelRadius
+                      : Appearance.regaliaEverywhere ? Appearance.regalia.panelRadius
                       : Appearance.angelEverywhere ? Appearance.angel.roundingLarge
                       : Appearance.inirEverywhere ? Appearance.inir.roundingLarge
                       : Appearance.rounding.windowRounding
@@ -579,7 +580,7 @@ Scope {
                 // that is inherited by children and would dim the whole UI
                 // instead of the panel background. At the default 1.0 both paths
                 // are identity, so no style changes appearance.
-                color: Appearance.auroraEverywhere ? "transparent"
+                color: Appearance.auroraEverywhere || Appearance.regaliaEverywhere ? "transparent"
                      : CF.ColorUtils.applyAlpha(
                          Appearance.inirEverywhere ? Appearance.inir.colLayer0
                        : Appearance.zzzEverywhere ? Appearance.zzz.chrome
@@ -616,6 +617,18 @@ Scope {
                 // backdrop already carries the transition).
                 opacity: (GlobalStates.settingsOverlayOpen ?? false) ? 1 : 0
                 visible: opacity > 0
+
+                RegaliaPlate {
+                    anchors.fill: parent
+                    z: -1
+                    visible: Appearance.regaliaEverywhere
+                    fillColor: CF.ColorUtils.applyAlpha(Appearance.regalia.bg0,
+                        settingsCard.panelBgOpacity)
+                    radius: settingsCard.radius
+                    inset: Appearance.regalia.panelInset
+                    elevated: true
+                    glassEnabled: true
+                }
 
                 // Glass background for aurora/angel wallpaper blur
                 GlassBackground {
@@ -698,13 +711,21 @@ Scope {
 
                             Rectangle {
                                 anchors.fill: parent
-                                radius: width / 2
-                                color: Appearance.angelEverywhere ? Appearance.angel.colGlassCard
+                                radius: Appearance.regaliaEverywhere ? Appearance.regalia.roundSmall : width / 2
+                                color: Appearance.regaliaEverywhere ? "transparent"
+                                    : Appearance.angelEverywhere ? Appearance.angel.colGlassCard
                                     : Appearance.auroraEverywhere ? Appearance.aurora.colSubSurface
                                     : Appearance.inirEverywhere ? Appearance.inir.colLayer1
                                     : Appearance.colors.colLayer1
-                                border.width: 1
+                                border.width: Appearance.regaliaEverywhere ? 0 : 1
                                 border.color: Appearance.colors.colPrimary
+
+                                RegaliaControlFace {
+                                    anchors.fill: parent
+                                    visible: Appearance.regaliaEverywhere
+                                    fillColor: Appearance.regalia.controlPlate
+                                    radius: parent.radius
+                                }
                             }
 
                             Rectangle {
@@ -712,7 +733,7 @@ Scope {
                                 anchors.centerIn: parent
                                 width: 34
                                 height: 34
-                                radius: width / 2
+                                radius: Appearance.regaliaEverywhere ? Appearance.regalia.roundVerySmall : width / 2
                                 visible: false
                             }
 
@@ -1103,7 +1124,8 @@ Scope {
                                                 id: navBtn
                                                 visible: navItem.modelData.type === "page"
                                                 width: parent.width
-                                                implicitHeight: visible ? 34 : 0
+                                                implicitHeight: visible
+                                                    ? (Appearance.regaliaEverywhere ? Appearance.regalia.controlHeight : 34) : 0
                                                 z: 1
 
                                                 readonly property int pageRealIndex: navItem.modelData.realIndex !== undefined ? navItem.modelData.realIndex : navItem.index
@@ -1114,17 +1136,22 @@ Scope {
                                                 // click point on a transparent nav item.
                                                 rippleEnabled: !Appearance.zzzEverywhere
 
-                                                buttonRadius: Appearance.zzzEverywhere
+                                                buttonRadius: Appearance.regaliaEverywhere
+                                                    ? Appearance.regalia.roundSmall
+                                                    : Appearance.zzzEverywhere
                                                     ? Appearance.zzz.controlRadius
                                                     : Math.min(width, height) / 2
                                                 toggled: overlayCurrentPage === pageRealIndex
                                                 colBackground: "transparent"
-                                                colBackgroundToggled: "transparent"
+                                                colBackgroundToggled: Appearance.regaliaEverywhere
+                                                    ? Appearance.regalia.primaryPlate : "transparent"
                                                 // zzz: transparent, not paperAlt — this Control's own
                                                 // background renders above sharedNavIndicator (z:1 vs
                                                 // z:-1 below), so any opaque fill here fully hides the
                                                 // sticker pill on hover instead of layering with it.
-                                                colBackgroundToggledHover: Appearance.zzzEverywhere
+                                                colBackgroundToggledHover: Appearance.regaliaEverywhere
+                                                    ? Appearance.regalia.primaryPlateHover
+                                                    : Appearance.zzzEverywhere
                                                     ? "transparent"
                                                     : Appearance.angelEverywhere
                                                     ? Appearance.angel.colGlassCardHover
@@ -1133,7 +1160,9 @@ Scope {
                                                         : Appearance.auroraEverywhere
                                                             ? Appearance.aurora.colElevatedSurface
                                                             : CF.ColorUtils.transparentize(Appearance.colors.colLayer1Hover, 0.5)
-                                                colBackgroundHover: Appearance.zzzEverywhere
+                                                colBackgroundHover: Appearance.regaliaEverywhere
+                                                    ? Appearance.regalia.surfacePlateHover
+                                                    : Appearance.zzzEverywhere
                                                     ? Appearance.zzz.paperAlt
                                                     : Appearance.colors.colLayer1Hover
 
@@ -1144,15 +1173,20 @@ Scope {
 
                                                     RowLayout {
                                                         anchors.fill: parent
-                                                        anchors.leftMargin: 10
-                                                        anchors.rightMargin: 8
-                                                        spacing: 10
+                                                        anchors.leftMargin: Appearance.regaliaEverywhere
+                                                            ? Appearance.regalia.controlPaddingHorizontal : 10
+                                                        anchors.rightMargin: Appearance.regaliaEverywhere
+                                                            ? Appearance.regalia.controlPaddingHorizontal : 8
+                                                        spacing: Appearance.regaliaEverywhere
+                                                            ? Appearance.regalia.controlGap : 10
 
                                                         MaterialSymbol {
                                                             text: navItem.modelData.icon || ""
                                                             iconSize: 18
-                                                            color: navBtn.toggled
-                                                                ? (Appearance.zzzEverywhere
+                                                            color: navBtn.toggled || (Appearance.regaliaEverywhere && navBtn.buttonHovered)
+                                                                ? (Appearance.regaliaEverywhere
+                                                                    ? Appearance.regalia.hardwarePrimary
+                                                                    : Appearance.zzzEverywhere
                                                                     ? Appearance.zzz.ink
                                                                     : Appearance.inirEverywhere
                                                                     ? Appearance.inir.colAccent
@@ -1174,8 +1208,9 @@ Scope {
                                                                 pixelSize: Appearance.font.pixelSize.small
                                                                 weight: navBtn.toggled ? Font.Medium : Font.Normal
                                                             }
-                                                            color: navBtn.toggled
-                                                                ? (Appearance.zzzEverywhere ? Appearance.zzz.ink : Appearance.colors.colOnLayer1)
+                                                            color: navBtn.toggled || (Appearance.regaliaEverywhere && navBtn.buttonHovered)
+                                                                ? (Appearance.regaliaEverywhere ? Appearance.regalia.primaryPlateInk
+                                                                    : Appearance.zzzEverywhere ? Appearance.zzz.ink : Appearance.colors.colOnLayer1)
                                                                 : Appearance.colors.colOnSurfaceVariant
                                                             elide: Text.ElideRight
 

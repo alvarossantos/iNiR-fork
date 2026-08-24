@@ -33,6 +33,7 @@ Rectangle {
     // Blur radius as a fraction of blurMax. 1 is the house default every existing
     // caller inherits; lower values are for surfaces that expose it to the user.
     property real blurStrength: 1
+    property real saturationStrength: 0.2
     readonly property bool useWallpaperBackdrop: root.forceBackdrop
         ? Appearance.effectsEnabled
         : (Appearance.blurBackendFor("panels", Appearance.blurTopology.unsupported) === "wallpaper"
@@ -88,7 +89,7 @@ Rectangle {
             anchors.fill: source
             saturation: root.angelEverywhere
                 ? (Appearance.angel.blurSaturation * Appearance.angel.colorStrength)
-                : (Appearance.effectsEnabled ? 0.2 : 0)
+                : (Appearance.effectsEnabled ? root.saturationStrength : 0)
             blurEnabled: Appearance.effectsEnabled
             blurMax: 64
             blur: Appearance.effectsEnabled
