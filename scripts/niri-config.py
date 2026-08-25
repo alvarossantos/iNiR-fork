@@ -741,9 +741,21 @@ def _has_top_level_flag(block_content, flag_name):
 # ─── Layout ───────────────────────────────────────────────────────────
 
 
+def _resolve_layout_file() -> Path:
+    """Resolve the layout file — check theme-active.kdl first (where layout {} lives),
+    then fall back to the modular section file, then root config."""
+    config_dir = get_niri_config_dir()
+    theme_file = config_dir / "theme-active.kdl"
+    if theme_file.exists():
+        content = theme_file.read_text()
+        if _extract_block(content, "layout", top_level=True):
+            return theme_file
+    return resolve_niri_section_file("config.d/20-layout-and-overview.kdl")
+
+
 def cmd_get_layout():
     """Read current layout config from KDL file."""
-    layout_file = resolve_niri_section_file("config.d/20-layout-and-overview.kdl")
+    layout_file = _resolve_layout_file()
 
     result = {
         "gaps": 25,
@@ -1658,7 +1670,7 @@ def _set_input(config_dir, key, value):
 
 
 def _set_layout(config_dir, key, value):
-    layout_file = resolve_niri_section_file("config.d/20-layout-and-overview.kdl")
+    layout_file = _resolve_layout_file()
     if not layout_file.exists():
         print(json.dumps({"error": "layout config file not found"}))
         return 1

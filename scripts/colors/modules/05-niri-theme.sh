@@ -31,7 +31,13 @@ main() {
   # Semi-transparent variant of active for insert-hint
   local insert_hint_color="${active_color}80"
 
-  log_module "updating theme-active.kdl: active=$active_color inactive=$inactive_color urgent=$urgent_color"
+  # Preserve the user's existing gaps value (default: 6).
+  local existing_gaps=6
+  if [[ -f "$theme_file" ]]; then
+    existing_gaps=$(grep -oP '^\s*gaps\s+\K[\d.]+' "$theme_file" 2>/dev/null || echo 6)
+  fi
+
+  log_module "updating theme-active.kdl: active=$active_color inactive=$inactive_color urgent=$urgent_color gaps=$existing_gaps"
 
   mkdir -p "$niri_config_dir"
 
@@ -43,7 +49,7 @@ main() {
 
 layout {
     // Gap between windows and from windows to screen edges (logical px).
-    gaps 6
+    gaps $existing_gaps
 
     // Transparent so iNiR's own wallpaper/backdrop shows through.
     background-color "transparent"
