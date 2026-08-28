@@ -305,6 +305,7 @@ Scope {
 
         // Expand the section containing the control and collapse others
         if (typeof SettingsSearchRegistry !== "undefined") {
+            SettingsSearchRegistry.activateTaskSectionForControl(control);
             SettingsSearchRegistry.expandSectionForControl(control);
         }
 
@@ -1471,11 +1472,10 @@ Scope {
                                     anchors.rightMargin: 20
                                     spacing: 10
 
-                                    MaterialSymbol {
+                                    MaterialShapeWrappedMaterialSymbol {
                                         text: overlayPageHeader.meta.icon ?? ""
-                                        rotation: overlayPageHeader.meta.iconRotation ?? 0
-                                        iconSize: 20
-                                        color: Appearance.inirEverywhere ? Appearance.inir.colAccent : Appearance.colors.colPrimary
+                                        iconSize: 15
+                                        Layout.alignment: Qt.AlignVCenter
                                     }
 
                                     StyledText {

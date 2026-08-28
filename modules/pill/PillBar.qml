@@ -33,6 +33,15 @@ Scope {
     property string openSurface: ""
     property var autoHideShownByScreen: ({})
 
+    function scaleForScreen(screen): real {
+        if (!screen)
+            return Math.max(0.6, root.uiScale)
+        const shortEdge = Math.min(screen.width, screen.height)
+        const resolutionScale = Math.max(0.78, Math.min(1.6, shortEdge / 1080))
+        const requested = resolutionScale * 1.1 * root.uiScale
+        return Math.max(0.6, requested)
+    }
+
     function setAutoHideShown(screenName: string, shown: bool): void {
         if (!screenName || root.autoHideShownByScreen[screenName] === shown)
             return
@@ -52,9 +61,21 @@ Scope {
             if (GlobalStates.widgetEditMode)
                 root.close()
         }
+        function onPillSurfaceCommand(command: string, surface: string): void {
+            if (command === "open")
+                root.openSurfaceByName(surface)
+            else if (command === "close")
+                root.close()
+            else if (command === "toggle") {
+                if (root.openSurface === surface)
+                    root.close()
+                else
+                    root.openSurfaceByName(surface)
+            }
+        }
     }
 
-    readonly property var surfaceNames: ["power", "media", "battery", "calendar", "link", "mixer", "sysmon", "clipboard", "glance", "launcher", "recorder"]
+    readonly property var surfaceNames: ["power", "media", "battery", "calendar", "link", "mixer", "sysmon", "clipboard", "glance", "launcher", "recorder", "settings"]
     readonly property var targetScreens: {
         const screens = Quickshell.screens;
         const list = Config.options?.bar?.screenList ?? [];
@@ -104,6 +125,8 @@ Scope {
     readonly property real uiScale: Config.options?.bar?.pill?.scale ?? 1
     readonly property real topGap: Config.options?.bar?.pill?.topGap ?? 1
     readonly property real appGap: Config.options?.bar?.pill?.appGap ?? 1
+    readonly property bool floatOverWindows:
+        Config.options?.bar?.pill?.floatOverWindows ?? false
 
     function openTrayMenu(item, anchorX, hostWindow) {
         trayMenu.s = hostWindow ? hostWindow.s : 1;
@@ -127,9 +150,11 @@ Scope {
             id: reserve
             required property var modelData
 
-            readonly property real s: modelData ? (modelData.height / 1080) * root.uiScale : 1
+            readonly property real s: root.scaleForScreen(modelData)
             readonly property real topGapPx: 8 * root.topGap * s
-            readonly property real restHeight: (Config.options?.bar?.pill?.barMode ?? false) ? 58 * s : 38 * s
+            readonly property real restHeight: (Config.options?.bar?.pill?.barMode ?? false)
+                ? Math.max(58, Config.options?.bar?.pill?.expandedHeight ?? 66) * s
+                : Math.max(38, Config.options?.bar?.pill?.restHeight ?? 44) * s
             readonly property real gameBarH: 34 * s
 
             /**
@@ -181,7 +206,7 @@ Scope {
                 : useGameZone ? gameBarH
                 : autoHideEnabled
                     ? ((Config.options?.bar?.autoHide?.pushWindows ?? false) && autoHideShown ? reservedH : 0)
-                    : reservedH
+                    : root.floatOverWindows ? 0 : reservedH
             aboveWindows: true
 
             anchors { top: true; left: true; right: true }
@@ -199,7 +224,7 @@ Scope {
             id: overlay
             required property var modelData
 
-            readonly property real s: modelData ? (modelData.height / 1080) * root.uiScale : 1
+            readonly property real s: root.scaleForScreen(modelData)
             readonly property real topGapPx: 8 * root.topGap * s
             readonly property string surface: root.openMon === modelData.name ? root.openSurface : ""
             readonly property bool surfaceOpen: surface.length > 0
@@ -391,7 +416,7 @@ Scope {
 
                 Pill {
                     id: pill
-                    s: overlay.s
+                    s: overlay.surfaceOpen ? Math.max(1, overlay.s) : overlay.s
                     screenName: overlay.modelData ? overlay.modelData.name : ""
                     barWindow: overlay
                     surface: overlay.surface

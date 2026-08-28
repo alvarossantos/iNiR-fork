@@ -369,6 +369,7 @@ ApplicationWindow {
 
         // Expand the section containing the control and collapse others
         if (typeof SettingsSearchRegistry !== "undefined") {
+            SettingsSearchRegistry.activateTaskSectionForControl(control);
             SettingsSearchRegistry.expandSectionForControl(control);
         }
 
@@ -998,7 +999,7 @@ ApplicationWindow {
                                                 }
                                                 color: navBtn.toggled || (Appearance.regaliaEverywhere && navBtn.buttonHovered)
                                                     ? (Appearance.regaliaEverywhere
-                                                        ? Appearance.regalia.onPrimaryPlate
+                                                        ? Appearance.regalia.primaryPlateInk
                                                         : Appearance.colors.colOnLayer1)
                                                     : Appearance.colors.colOnSurfaceVariant
                                                 elide: Text.ElideRight
@@ -1278,11 +1279,10 @@ ApplicationWindow {
                         anchors.rightMargin: 20
                         spacing: 10
 
-                        MaterialSymbol {
+                        MaterialShapeWrappedMaterialSymbol {
                             text: windowPageHeader.meta.icon ?? ""
-                            rotation: windowPageHeader.meta.iconRotation ?? 0
-                            iconSize: 20
-                            color: Appearance.inirEverywhere ? Appearance.inir.colAccent : Appearance.colors.colPrimary
+                            iconSize: 15
+                            Layout.alignment: Qt.AlignVCenter
                         }
 
                         StyledText {
@@ -1301,7 +1301,6 @@ ApplicationWindow {
                             font.pixelSize: Appearance.font.pixelSize.small
                             color: Appearance.colors.colSubtext
                             elide: Text.ElideRight
-                            opacity: 0.85
                         }
                     }
 

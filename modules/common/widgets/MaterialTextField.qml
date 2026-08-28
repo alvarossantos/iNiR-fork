@@ -16,18 +16,7 @@ TextField {
     Material.background: Appearance.regaliaEverywhere ? "transparent" : Appearance.colors.colLayer1
     Material.foreground: Appearance.regaliaEverywhere ? Appearance.regalia.onColor : Appearance.colors.colOnSurface
     Material.containerStyle: Appearance.regaliaEverywhere ? Material.Filled : Material.Outlined
-    renderType: Text.NativeRendering
-
-    RegaliaControlFace {
-        anchors.fill: parent
-        z: -0.5
-        visible: Appearance.regaliaEverywhere
-        fillColor: root.activeFocus
-            ? Appearance.regalia.controlPlateHover
-            : Appearance.regalia.controlPlate
-        radius: Appearance.regalia.roundSmall
-        hovered: root.hovered && !root.activeFocus
-    }
+    renderType: Text.QtRendering
 
     // Settings search integration
     property bool enableSettingsSearch: true
@@ -98,13 +87,51 @@ TextField {
 
     selectedTextColor: Appearance.regaliaEverywhere ? Appearance.regalia.primaryPlateInk : Appearance.colors.colOnSecondaryContainer
     selectionColor: Appearance.regaliaEverywhere ? Appearance.regalia.primaryPlate : Appearance.colors.colSecondaryContainer
-    placeholderTextColor: Appearance.regaliaEverywhere ? Appearance.regalia.onMuted : Appearance.colors.colOutline
+    placeholderTextColor: Appearance.regaliaEverywhere ? Appearance.regalia.onMuted : Appearance.colors.colOnLayer1
     clip: true
+
+    background: Item {
+        implicitHeight: 56
+
+        RegaliaControlFace {
+            anchors.fill: parent
+            visible: Appearance.regaliaEverywhere
+            fillColor: root.activeFocus
+                ? Appearance.regalia.controlPlateHover
+                : Appearance.regalia.controlPlate
+            radius: Appearance.regalia.roundSmall
+            hovered: root.hovered && !root.activeFocus
+            focused: root.activeFocus
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            visible: !Appearance.regaliaEverywhere
+            color: Appearance.colors.colLayer1
+            topLeftRadius: 4
+            topRightRadius: 4
+
+            Rectangle {
+                anchors {
+                    left: parent.left
+                    right: parent.right
+                    bottom: parent.bottom
+                }
+                height: 1
+                color: root.activeFocus ? Appearance.colors.colPrimary
+                    : root.hovered ? Appearance.colors.colOutline : Appearance.colors.colOutlineVariant
+
+                Behavior on color {
+                    animation: ColorAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Appearance.animation.elementMoveFast.type; easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve }
+                }
+            }
+        }
+    }
 
     font {
         family: Appearance.font.family.main
-        pixelSize: Appearance?.font.pixelSize.small ?? 15
-        hintingPreference: Font.PreferFullHinting
+        pixelSize: Appearance?.font.pixelSize.normal ?? 16
+        hintingPreference: Font.PreferNoHinting
         variableAxes: Appearance.font.variableAxes.main
     }
     wrapMode: TextEdit.Wrap
