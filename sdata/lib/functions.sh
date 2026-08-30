@@ -288,7 +288,8 @@ ${end_marker}
 "
   local shell_file=""
 
-  for shell_file in "$HOME/.profile" "$HOME/.bashrc" "$HOME/.zshrc"; do
+  for shell_file in "$HOME/.profile" "$HOME/.bash_profile" "$HOME/.bashrc" \
+                    "$HOME/.zprofile" "$HOME/.zshrc"; do
     touch "$shell_file"
     sed -i "/${marker}/,/${end_marker}/d" "$shell_file" 2>/dev/null || true
     printf '%s\n' "$sh_block" >> "$shell_file"
@@ -301,6 +302,18 @@ if not contains -- "${launcher_dir}" \$PATH
     set -gx PATH "${launcher_dir}" \$PATH
 end
 EOF
+
+  if command -v systemctl >/dev/null 2>&1; then
+    local manager_path
+    manager_path="$(systemctl --user show-environment 2>/dev/null \
+      | sed -n 's/^PATH=//p' | head -1)"
+    if [[ -n "$manager_path" ]]; then
+      case ":${manager_path}:" in
+        *":${launcher_dir}:"*) ;;
+        *) systemctl --user set-environment "PATH=${launcher_dir}:${manager_path}" 2>/dev/null || true ;;
+      esac
+    fi
+  fi
 }
 
 function backup_clashing_targets(){

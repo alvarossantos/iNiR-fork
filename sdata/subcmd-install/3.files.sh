@@ -162,7 +162,7 @@ case "${SKIP_QUICKSHELL}" in
       chmod +x "${INIR_LAUNCHER_PATH}"
       ensure_launcher_path_in_shells "${XDG_BIN_HOME}"
       log_success "Launcher installed"
-      log_success "Launcher path configured for interactive shells"
+      log_success "Launcher path configured for login and interactive shells"
     fi
 
     local _service_refresh_status=1
@@ -331,13 +331,9 @@ case "${SKIP_NIRI}" in
         log_warning "Qt theme: qt6ct (plasma-integration not found — install it for proper Qt theming)"
       fi
 
-      _launcher_path_escaped="${INIR_LAUNCHER_PATH//&/\\&}"
       sed -i \
-        -e 's|spawn "bash" "-lc" "exec \"\$(inir path)/scripts/launch-terminal.sh\""|spawn "'"${_launcher_path_escaped}"'" "terminal"|' \
-        -e 's|spawn "bash" "-lc" "exec \"\$(inir path)/scripts/close-window.sh\""|spawn "'"${_launcher_path_escaped}"'" "close-window"|' \
-        "$NIRI_BINDS_TARGET"
-      sed -i \
-        -e 's|spawn "inir" "|spawn "'"${_launcher_path_escaped}"'" "|g' \
+        -e 's|spawn "bash" "-lc" "exec \"\$(inir path)/scripts/launch-terminal.sh\""|spawn "inir" "terminal"|' \
+        -e 's|spawn "bash" "-lc" "exec \"\$(inir path)/scripts/close-window.sh\""|spawn "inir" "close-window"|' \
         "$NIRI_BINDS_TARGET"
     fi
     ;;
