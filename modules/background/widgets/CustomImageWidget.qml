@@ -684,7 +684,10 @@ AbstractBackgroundWidget {
                         TapHandler {
                             onTapped: Config.setNestedValue(root._configPath + ".shape", quickShape.modelData.value)
                         }
-                        StyledToolTip { text: quickShape.modelData.label }
+                        StyledToolTip {
+                            text: quickShape.modelData.label
+                            extraVisibleCondition: quickShapeHover.hovered
+                        }
                     }
                 }
             }
