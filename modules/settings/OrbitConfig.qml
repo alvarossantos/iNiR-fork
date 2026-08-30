@@ -955,7 +955,8 @@ ContentPage {
                     onSelected: value => Config.setNestedValue("orbit.shelf.density", value)
                     options: [
                         { displayName: Translation.tr("Comfortable"), icon: "density_medium", value: "comfortable" },
-                        { displayName: Translation.tr("Compact"), icon: "density_small", value: "compact" }
+                        { displayName: Translation.tr("Compact"), icon: "density_small", value: "compact" },
+                        { displayName: Translation.tr("HUGE AS YOUR MOM"), icon: "density_large", value: "huge" }
                     ]
                 }
             }

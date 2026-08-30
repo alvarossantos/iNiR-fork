@@ -367,7 +367,9 @@ FocusScope {
         property string descriptionText: ""
         default property alias choices: choiceGrid.data
         readonly property int choiceCount: choiceGrid.children.length
-        readonly property int columnCount: choiceCount <= 3 ? Math.max(1, choiceCount)
+        property int columnCountOverride: 0
+        readonly property int columnCount: columnCountOverride > 0 ? columnCountOverride
+            : choiceCount <= 3 ? Math.max(1, choiceCount)
             : root.controlColumnWidth >= 430 ? 3 : 2
 
         Layout.alignment: Qt.AlignHCenter
@@ -1401,8 +1403,15 @@ FocusScope {
 
             ChoiceControl {
                 labelText: Translation.tr("Density")
+                columnCountOverride: 2
                 DeckChip { text: Translation.tr("Comfortable"); selected: (root.shelf.density ?? "comfortable") === "comfortable"; onClicked: root.previewRequested("shelf.density", "comfortable") }
                 DeckChip { text: Translation.tr("Compact"); selected: root.shelf.density === "compact"; onClicked: root.previewRequested("shelf.density", "compact") }
+                DeckChip {
+                    Layout.columnSpan: 2
+                    text: Translation.tr("HUGE AS YOUR MOM")
+                    selected: root.shelf.density === "huge"
+                    onClicked: root.previewRequested("shelf.density", "huge")
+                }
             }
 
             ChoiceControl {

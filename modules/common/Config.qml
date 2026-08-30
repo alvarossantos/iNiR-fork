@@ -2696,7 +2696,7 @@ Singleton {
                     property bool enable: true
                     property bool showStudioButton: true
                     property string layout: "islands" // "bar" | "islands" | "minimal"
-                    property string density: "comfortable" // "comfortable" | "compact"
+                    property string density: "comfortable" // "comfortable" | "compact" | "huge"
                     property string labels: "auto" // "auto" | "always" | "icons"
                     property string islandStyle: "material" // "material" | "ricelin"
                     property int moduleSpacing: 7
