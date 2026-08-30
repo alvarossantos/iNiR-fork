@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import Quickshell.Widgets
 import qs
 import qs.services
@@ -135,7 +136,11 @@ Item {
         const result = []
         for (let i = 0; i < root.workspacesForOutput.length; ++i) {
             if (!root.workspaceVisible(i)) continue
-            result.push({ workspace: root.workspacesForOutput[i], workspaceIndex: i })
+            result.push({
+                workspace: root.workspacesForOutput[i],
+                workspaceId: root.workspacesForOutput[i].id,
+                workspaceIndex: i
+            })
         }
         return result
     }
@@ -586,7 +591,10 @@ Item {
 
     Repeater {
         id: workspaceRepeater
-        model: root.displayedWorkspaces
+        model: ScriptModel {
+            values: root.displayedWorkspaces
+            objectProp: "workspaceId"
+        }
 
         delegate: Item {
             id: workspaceCard
