@@ -844,7 +844,7 @@ ContentPage {
                 Layout.fillWidth: true
                 visible: root.orbitOptions.keyboardNavigation ?? true
                 text: (root.orbitOptions.stageMode ?? "stage") === "orbital"
-                    ? Translation.tr("Tab cycles core windows, Shelf and Pocket · ←/→ rotates Orbit · ↑/↓ selects core windows · Space enters the core workspace · Shift+←/→ moves the selected window · Enter activates · Delete closes · S stashes · Menu or Shift+F10 opens window actions · P opens Pocket · O switches Stage/Orbital")
+                    ? Translation.tr("Tab cycles core windows, Shelf and Pocket · ←/→ rotates Orbit · ↑/↓ selects core windows · Ctrl+←/→ or PageUp/PageDown switches Niri workspaces · Space enters the core workspace · Shift+←/→ moves the selected window · Enter activates · Delete closes · S stashes · Menu or Shift+F10 opens window actions · P opens Pocket · O switches Stage/Orbital")
                     : Translation.tr("Tab cycles previews, Shelf and Pocket · arrows navigate · Shift+←/→ moves the selected window · Ctrl+←/→ or PageUp/PageDown switches workspaces · Enter activates · Delete closes · S stashes · Menu or Shift+F10 opens window actions · P opens Pocket · O switches Stage/Orbital")
                 color: Appearance.colors.colSubtext
                 font.pixelSize: Appearance.font.pixelSize.smaller

@@ -600,7 +600,11 @@ Item {
             readonly property int offset: root.relativeOffset(workspaceIndex)
             readonly property real angle: root.satelliteAngle(workspaceIndex)
             readonly property int satelliteRank: Math.max(1, Math.abs(offset))
-            readonly property int entryOrdinal: isCore ? 0 : satelliteRank
+            readonly property int entryOrdinal: isCore ? 0
+                : root.spatialLayout === "horizon" ? horizonSlot + 1
+                : root.spatialLayout === "gallery" ? gallerySlot + 1
+                : root.spatialLayout === "atlas" ? atlasRow + atlasColumn + 1
+                : satelliteRank
             readonly property real entryDelayProgress: root.entryCascade && root.entryDurationMs > 0
                 ? Math.min(0.58, entryOrdinal * root.entryStaggerMs / root.entryDurationMs) : 0
             readonly property real entryLocalProgress: root.entryCascade
@@ -632,9 +636,20 @@ Item {
                 : root.spatialLayout === "deck" ? Math.max(-0.72, Math.min(0.72,
                     (satelliteRank - 1) * 0.20 * (offset < 0 ? -1 : 1)))
                 : root.spatialLayout === "atlas" ? atlasAxisY : 0.48
-            readonly property real entryOffsetX: (1 - entryLocalProgress) * sceneAxisX * 24
-            readonly property real entryOffsetY: (1 - entryLocalProgress)
-                * (isCore ? 10 : 16 + satelliteRank * 3)
+            readonly property real entryOffsetX: (1 - entryLocalProgress) * (isCore ? 0
+                : root.spatialLayout === "orbit" ? -sceneAxisX * 52
+                : root.spatialLayout === "horizon" ? -42
+                : root.spatialLayout === "gallery" ? -gallerySide * 44
+                : root.spatialLayout === "deck" ? -gallerySide * (deckReach * 0.28 + 18)
+                : root.spatialLayout === "atlas" ? -atlasAxisX * 28 : 0)
+            readonly property real entryOffsetY: (1 - entryLocalProgress) * (isCore
+                ? (root.spatialLayout === "horizon" ? -18
+                    : root.spatialLayout === "deck" ? 12 : 8)
+                : root.spatialLayout === "orbit" ? -sceneAxisY * 38
+                : root.spatialLayout === "horizon" ? 24
+                : root.spatialLayout === "gallery" ? 0
+                : root.spatialLayout === "deck" ? -deckLift
+                : root.spatialLayout === "atlas" ? -atlasAxisY * 24 : 0)
             readonly property real configuredDepthScale: 1
                 - (root.depthPercent / 100) * (1 - depthPosition)
             readonly property real depthScale: configuredDepthScale
@@ -807,6 +822,7 @@ Item {
 
             Behavior on x {
                 enabled: Appearance.animationsEnabled && root.transitionDurationMs > 0
+                    && root.entryProgress >= 1
                 NumberAnimation {
                     duration: root.transitionDurationMs
                     easing.type: root.navigationEasingType
@@ -814,6 +830,7 @@ Item {
             }
             Behavior on y {
                 enabled: Appearance.animationsEnabled && root.transitionDurationMs > 0
+                    && root.entryProgress >= 1
                 NumberAnimation {
                     duration: root.transitionDurationMs
                     easing.type: root.navigationEasingType

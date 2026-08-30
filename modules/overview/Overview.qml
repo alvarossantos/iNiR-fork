@@ -441,6 +441,7 @@ Scope {
                 root._presentPending = true
                 _overviewCloseTimer.stop()
                 orbitPresentationExit.stop()
+                orbitSceneExit.stop()
                 visible = true
                 if (root.orbitMode) {
                     root.orbitPresentationProgress = 1
@@ -493,10 +494,13 @@ Scope {
                 if (root.orbitMode) {
                     orbitPresentationDelayTimer.stop()
                     orbitPresentationEnter.stop()
-                    if (Appearance.animationsEnabled && root.orbitExitDuration > 0)
+                    if (Appearance.animationsEnabled && root.orbitExitDuration > 0) {
                         orbitPresentationExit.restart()
-                    else
+                        orbitSceneExit.restart()
+                    } else {
                         root.orbitPresentationProgress = 0
+                        root.orbitEntryProgress = 0
+                    }
                 }
                 _overviewCloseTimer.restart()
             }
@@ -561,7 +565,7 @@ Scope {
                 to: 1
                 duration: root.orbitEnterDuration
                 easing.type: root.orbitEntryStyle === "fade"
-                    ? Easing.InOutQuad : Easing.InOutCubic
+                    ? Easing.OutQuad : Easing.OutCubic
                 onFinished: root.publishOrbitRuntimeStatus()
             }
 
@@ -580,6 +584,15 @@ Scope {
                 duration: root.orbitExitDuration
                 easing.type: Easing.BezierSpline
                 easing.bezierCurve: Appearance.animationCurves.standardAccel
+            }
+
+            NumberAnimation {
+                id: orbitSceneExit
+                target: root
+                property: "orbitEntryProgress"
+                to: 0
+                duration: root.orbitExitDuration
+                easing.type: Easing.InCubic
             }
 
             Timer {
@@ -884,9 +897,11 @@ Scope {
                     : root.orbitPresentationPreset === "sweep" ? 1.8
                     : root.orbitPresentationPreset === "adaptive" ? 1.45 : 1.15
                 readonly property real orbitTravel: root.orbitPresentationDistance * orbitDistanceFactor
-                readonly property real orbitClosedX: root.orbitEffectivePresentationDirection === "left" ? -orbitTravel
+                readonly property real orbitClosedX: root.orbitStageMode === "orbital" ? 0
+                    : root.orbitEffectivePresentationDirection === "left" ? -orbitTravel
                     : root.orbitEffectivePresentationDirection === "right" ? orbitTravel : 0
-                readonly property real orbitClosedY: root.orbitEffectivePresentationDirection === "top" ? -orbitTravel
+                readonly property real orbitClosedY: root.orbitStageMode === "orbital" ? 0
+                    : root.orbitEffectivePresentationDirection === "top" ? -orbitTravel
                     : root.orbitEffectivePresentationDirection === "bottom" ? orbitTravel : 0
                 property real openProgress: root.orbitMode
                     ? (root._presentedOpen ? 1 : root.orbitPresentationProgress)
@@ -1131,7 +1146,7 @@ Scope {
                                 && (event.modifiers & Qt.ControlModifier))) {
                         if (!root.searchingText) {
                             if (root.orbitMode && CompositorService.isNiri) {
-                                overviewLoader.item?.focusRelativeWorkspace(-1)
+                                overviewLoader.item?.switchRelativeWorkspace(-1)
                             } else if (CompositorService.isNiri) {
                                 const outputName = root.screen?.name ?? ""
                                 const workspaces = NiriService.allWorkspaces
@@ -1149,7 +1164,7 @@ Scope {
                                 && (event.modifiers & Qt.ControlModifier))) {
                         if (!root.searchingText) {
                             if (root.orbitMode && CompositorService.isNiri) {
-                                overviewLoader.item?.focusRelativeWorkspace(1)
+                                overviewLoader.item?.switchRelativeWorkspace(1)
                             } else if (CompositorService.isNiri) {
                                 const outputName = root.screen?.name ?? ""
                                 const workspaces = NiriService.allWorkspaces
@@ -1204,7 +1219,8 @@ Scope {
                             * root.orbitStageSwitchDirection * 24) : 0
                     readonly property real orbitEntryVisual: root.orbitEntryStyle === "instant"
                         ? 1 : root.orbitEntryProgress
-                    readonly property real orbitEntryTravelFactor: root.orbitEntryStyle === "fade" ? 0
+                    readonly property real orbitEntryTravelFactor: root.orbitStageMode === "orbital" ? 0
+                        : root.orbitEntryStyle === "fade" ? 0
                         : root.orbitEntryStyle === "drift" ? 0.52 : 0.20
                     readonly property real orbitEntryTravel: root.orbitPresentationDistance * orbitEntryTravelFactor
                     readonly property real orbitEntryX: root.orbitEffectivePresentationDirection === "left" ? -orbitEntryTravel
