@@ -316,6 +316,26 @@ EOF
   fi
 }
 
+function niri_can_resolve_launcher_dir(){
+  local launcher_dir="$1"
+  local niri_pid=""
+  local niri_path=""
+
+  command -v pgrep >/dev/null 2>&1 || return 1
+  niri_pid="$(pgrep -xo niri 2>/dev/null || true)"
+  [[ -n "$niri_pid" ]] || return 0
+  [[ -r "/proc/${niri_pid}/environ" ]] || return 1
+
+  niri_path="$(tr '\0' '\n' < "/proc/${niri_pid}/environ" \
+    | sed -n 's/^PATH=//p' | head -1)"
+  [[ -n "$niri_path" ]] || return 1
+
+  case ":${niri_path}:" in
+    *":${launcher_dir}:"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 function backup_clashing_targets(){
   local source_dir="$1"
   local target_dir="$2"

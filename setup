@@ -277,12 +277,12 @@ ensure_user_inir_service_enabled() {
 
     local wants_dir="${XDG_CONFIG_HOME}/systemd/user/${target}.wants"
     if [[ ! -e "$wants_dir/inir.service" ]]; then
-        mkdir -p "$wants_dir"
-        ln -sf "$service_path" "$wants_dir/inir.service"
+        mkdir -p "$wants_dir" || return 1
+        ln -sf "$service_path" "$wants_dir/inir.service" || return 1
     fi
 
-    systemctl --user daemon-reload >/dev/null 2>&1 || true
-    return 0
+    systemctl --user daemon-reload >/dev/null 2>&1 || return 1
+    [[ -e "$wants_dir/inir.service" || -L "$wants_dir/inir.service" ]]
 }
 
 ###############################################################################
@@ -2550,22 +2550,32 @@ run_update() {
         tui_success "Updated existing user inir.service"
     fi
 
-    ensure_user_inir_service_enabled >/dev/null 2>&1 || true
+    if ensure_user_inir_service_enabled; then
+        tui_success "User inir.service autostart verified"
+    else
+        tui_warn "Could not wire inir.service to the compositor — run 'inir service enable'"
+    fi
 
     local niri_config="${XDG_CONFIG_HOME}/niri/config.kdl"
     local niri_startup_cfg="${XDG_CONFIG_HOME}/niri/config.d/50-startup.kdl"
     local niri_binds_cfg="${XDG_CONFIG_HOME}/niri/config.d/70-binds.kdl"
     if [[ -f "$niri_config" && -x "${XDG_BIN_HOME}/inir" ]]; then
-        if [[ -f "$niri_binds_cfg" ]]; then
-            sed -i \
-                -e 's|spawn "bash" "-lc" "exec \"\$(inir path)/scripts/launch-terminal.sh\""|spawn "inir" "terminal"|' \
-                -e 's|spawn "bash" "-lc" "exec \"\$(inir path)/scripts/close-window.sh\""|spawn "inir" "close-window"|' \
-                "$niri_binds_cfg"
+        if niri_can_resolve_launcher_dir "$XDG_BIN_HOME"; then
+            if [[ -f "$niri_binds_cfg" ]]; then
+                sed -i \
+                    -e 's|spawn "bash" "-lc" "exec \"\$(inir path)/scripts/launch-terminal.sh\""|spawn "inir" "terminal"|' \
+                    -e 's|spawn "bash" "-lc" "exec \"\$(inir path)/scripts/close-window.sh\""|spawn "inir" "close-window"|' \
+                    -e 's|spawn "[^"]*/inir" "|spawn "inir" "|g' \
+                    "$niri_binds_cfg"
+            else
+                sed -i \
+                    -e 's|spawn "bash" "-lc" "exec \"\$(inir path)/scripts/launch-terminal.sh\""|spawn "inir" "terminal"|' \
+                    -e 's|spawn "bash" "-lc" "exec \"\$(inir path)/scripts/close-window.sh\""|spawn "inir" "close-window"|' \
+                    -e 's|spawn "[^"]*/inir" "|spawn "inir" "|g' \
+                    "$niri_config"
+            fi
         else
-            sed -i \
-                -e 's|spawn "bash" "-lc" "exec \"\$(inir path)/scripts/launch-terminal.sh\""|spawn "inir" "terminal"|' \
-                -e 's|spawn "bash" "-lc" "exec \"\$(inir path)/scripts/close-window.sh\""|spawn "inir" "close-window"|' \
-                "$niri_config"
+            tui_warn "Niri is still running without ${XDG_BIN_HOME} in PATH; preserving existing launcher paths until the next session"
         fi
     fi
 
