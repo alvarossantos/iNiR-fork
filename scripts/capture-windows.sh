@@ -136,7 +136,11 @@ if [[ -n "$first_entry" ]]; then
   fi
 fi
 
-max_concurrent=4
+# niri screenshot-window always publishes to the global clipboard, even with
+# --path. Serializing captures avoids multiple compositor actions racing that
+# single selection and smooths the GPU/CPU burst. WindowPreviewService now
+# keeps capture batches small through per-window freshness budgets.
+max_concurrent=1
 pids=()
 count=0
 

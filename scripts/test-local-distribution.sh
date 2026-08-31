@@ -85,7 +85,10 @@ schema_checks = {
     "schema dock not hover-only": "property bool hoverToReveal: false" in schema,
     "schema right sidebar full height": "property bool collapseEmptyNotifications: false" in schema,
     "schema left sidebar full height": "property bool collapseWidgetsTab: false" in schema,
-    "schema wallhaven tab": "property JsonObject wallhaven: JsonObject {\n                    // Enable/disable the Wallhaven tab in the left sidebar\n                    property bool enable: true" in schema,
+    # `wallhaven` is the compatibility key; the UI is now the generic
+    # Wallpapers tab. Assert the schema contract instead of a stale comment.
+    "schema wallhaven compatibility": "property JsonObject wallhaven: JsonObject {" in schema
+        and "property bool enable: true" in schema[schema.index("property JsonObject wallhaven: JsonObject {"):],
     "schema news tab": "property JsonObject news: JsonObject {\n                    property bool enable: true" in schema,
     "wizard applies initial profile": "root.applyProfile(root.selectedProfile)" in wizard,
     "wizard dock pinned": '"dock.pinnedOnStartup": true' in wizard,
@@ -221,6 +224,39 @@ fi
 if grep -Fq 'MALLOC_ARENA_MAX' "$shell_exec" \
         || grep -Fq 'MALLOC_MMAP_THRESHOLD_' "$shell_exec"; then
     printf 'FAIL: application launch policy still carries retired allocator handling\n' >&2
+    exit 1
+fi
+
+orbit_stage="$runtime_root/modules/overview/OrbitOrbitalStage.qml"
+orbit_stage_view="$runtime_root/modules/overview/OverviewNiriWidget.qml"
+orbit_studio="$runtime_root/modules/overview/OrbitStudio.qml"
+if ! grep -Fq 'z: isCore ? 100 : 20 + workspaceIndex * 0.01' "$orbit_stage" \
+        || [[ "$(grep -c 'NumberAnimation { duration: root.transitionDurationMs; easing.type: root.navigationEasingType }' "$orbit_stage")" -lt 5 ]]; then
+    printf 'FAIL: Orbit orbital navigation no longer tracks geometry/depth continuously\n' >&2
+    exit 1
+fi
+if ! grep -Fq 'retainWhileLoading: true' "$orbit_stage" \
+        || ! grep -Fq 'retainWhileLoading: true' "$orbit_stage_view" \
+        || grep -Fq 'sourceSize.width: Math.max(1, Math.round(width * 2))' "$orbit_stage" \
+        || grep -Fq 'sourceSize.width: Math.max(1, Math.round(width * 2))' "$orbit_stage_view"; then
+    printf 'FAIL: Orbit preview decoding can reload during animated geometry changes\n' >&2
+    exit 1
+fi
+preview_service="$runtime_root/services/WindowPreviewService.qml"
+preview_capture="$runtime_root/scripts/capture-windows.sh"
+if ! grep -Fq 'requestedWindowMaxAgeMs' "$preview_service" \
+        || ! grep -Fq 'markPreviewDirty(root.lastFocusedWindowId)' "$preview_service" \
+        || ! grep -Fq '"-printf", "%f\\t%T@\\n"' "$preview_service" \
+        || ! grep -Fq 'corePreviewFreshnessMs: 10000' "$orbit_stage" \
+        || ! grep -Fq 'satellitePreviewFreshnessMs: 45000' "$orbit_stage" \
+        || ! grep -Fq 'mipmap: false' "$orbit_stage" \
+        || ! grep -Fq 'max_concurrent=1' "$preview_capture"; then
+    printf 'FAIL: Orbit preview freshness/quality policy regressed\n' >&2
+    exit 1
+fi
+if grep -Fq 'NavigationFineControls { visible: !root.workspaceMode }' "$orbit_studio" \
+        || grep -Fq 'PresentationFineControls { visible: !root.workspaceMode }' "$orbit_studio"; then
+    printf 'FAIL: Orbit Studio Motion exposes advanced tuning in the primary workflow\n' >&2
     exit 1
 fi
 
