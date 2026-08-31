@@ -1152,6 +1152,8 @@ Item {
                             fillMode: root.orbitMode ? Image.PreserveAspectFit : Image.PreserveAspectCrop
                             smooth: true
                             mipmap: true
+                            sourceSize.width: Math.max(1, Math.round(width * 2))
+                            sourceSize.height: Math.max(1, Math.round(height * 2))
                             visible: parent.showPreviews && status === Image.Ready
                             opacity: status === Image.Ready ? 1 : 0
 

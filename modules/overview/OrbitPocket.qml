@@ -174,6 +174,8 @@ PanelSurface {
                                 asynchronous: true
                                 smooth: true
                                 mipmap: true
+                                sourceSize.width: Math.max(1, Math.round(width * 2))
+                                sourceSize.height: Math.max(1, Math.round(height * 2))
                                 visible: status === Image.Ready
                             }
 

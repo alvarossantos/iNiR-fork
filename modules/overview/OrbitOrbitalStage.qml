@@ -953,7 +953,21 @@ Item {
                                     asynchronous: true
                                     smooth: true
                                     mipmap: true
-                                    visible: status === Image.Ready
+                                    // Captures are usually near the original window size. Orbit cards are much
+                                    // smaller, so avoid decoding multi-megapixel previews for a thumbnail.
+                                    sourceSize.width: Math.max(1, Math.round(width * 2))
+                                    sourceSize.height: Math.max(1, Math.round(height * 2))
+                                    visible: opacity > 0.001
+                                    opacity: status === Image.Ready ? 1 : 0
+
+                                    Behavior on opacity {
+                                        enabled: Appearance.animationsEnabled
+                                        NumberAnimation {
+                                            duration: Appearance.animation.elementMoveFast.duration
+                                            easing.type: Appearance.animation.elementMoveFast.type
+                                            easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve
+                                        }
+                                    }
                                 }
 
                                 Connections {
@@ -972,7 +986,8 @@ Item {
                                     implicitSize: Math.max(16,
                                         Math.round(Math.min(parent.width, parent.height) * 0.32))
                                     source: AppSearch.getIconSource(windowItem.modelData?.app_id ?? "")
-                                    visible: !previewImage.visible
+                                    opacity: 1 - previewImage.opacity
+                                    visible: opacity > 0.001
                                 }
 
                                 Rectangle {
