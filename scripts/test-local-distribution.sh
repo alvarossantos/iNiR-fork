@@ -43,6 +43,59 @@ if grep -q '^Environment=MALLOC_' "$service_unit" \
     exit 1
 fi
 
+step "service mask handling"
+service_mask_root="$(mktemp -d)"
+mkdir -p "$service_mask_root/systemd/user" "$service_mask_root/bin"
+cat > "$service_mask_root/bin/systemctl" <<'SH'
+#!/usr/bin/env bash
+printf '%s\n' "${INIR_TEST_SYSTEMCTL_STATE:-disabled}"
+SH
+chmod +x "$service_mask_root/bin/systemctl"
+ln -s /dev/null "$service_mask_root/systemd/user/inir.service"
+if ! (
+    export XDG_CONFIG_HOME="$service_mask_root"
+    export PATH="$service_mask_root/bin:$PATH"
+    source "$runtime_root/sdata/lib/functions.sh"
+    inir_user_service_is_masked
+); then
+    printf 'FAIL: user service mask is not detected\n' >&2
+    rm -rf "$service_mask_root"
+    exit 1
+fi
+rm -f "$service_mask_root/systemd/user/inir.service"
+printf '[Unit]\nDescription=test\n' > "$service_mask_root/systemd/user/inir.service"
+if (
+    export XDG_CONFIG_HOME="$service_mask_root"
+    export PATH="$service_mask_root/bin:$PATH"
+    source "$runtime_root/sdata/lib/functions.sh"
+    inir_user_service_is_masked
+); then
+    printf 'FAIL: regular user service is classified as masked\n' >&2
+    rm -rf "$service_mask_root"
+    exit 1
+fi
+if ! (
+    export XDG_CONFIG_HOME="$service_mask_root"
+    export PATH="$service_mask_root/bin:$PATH"
+    export INIR_TEST_SYSTEMCTL_STATE=masked-runtime
+    source "$runtime_root/sdata/lib/functions.sh"
+    inir_user_service_is_masked
+); then
+    printf 'FAIL: runtime user service mask is not detected\n' >&2
+    rm -rf "$service_mask_root"
+    exit 1
+fi
+rm -rf "$service_mask_root"
+if ! grep -Fq 'inir_user_service_is_masked && return 2' "$runtime_root/setup" \
+        || ! grep -Fq 'User inir.service is masked; leaving it unchanged' "$runtime_root/setup" \
+        || ! grep -Fq 'Shell restart skipped: inir.service is masked' "$runtime_root/setup" \
+        || ! grep -Fq 'User inir.service is masked' "$runtime_root/sdata/lib/doctor.sh" \
+        || ! grep -Fq 'systemctl --user unmask inir.service' "$runtime_root/sdata/subcmd-install/3.files.sh" \
+        || ! grep -Fq 'systemctl --user unmask --runtime inir.service' "$runtime_root/scripts/inir"; then
+    printf 'FAIL: install/update/doctor do not preserve the service mask contract\n' >&2
+    exit 1
+fi
+
 step "fresh install defaults"
 python3 - "$runtime_root" <<'PY'
 import json

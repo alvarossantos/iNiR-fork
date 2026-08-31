@@ -173,6 +173,12 @@ case "${SKIP_QUICKSHELL}" in
     if [[ -f "$_service_asset" ]]; then
       mkdir -p "$_service_dir"
 
+      if inir_user_service_is_masked; then
+        systemctl --user unmask inir.service >/dev/null 2>&1 || true
+        systemctl --user unmask --runtime inir.service >/dev/null 2>&1 || true
+        rm -f "$_service_target"
+      fi
+
       if [[ -f "$_service_target" ]]; then
         # Existing install: sync from repo template
         if sync_user_inir_service_from_repo_if_present; then

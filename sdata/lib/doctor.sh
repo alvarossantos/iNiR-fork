@@ -838,6 +838,12 @@ check_service_unit_health() {
     service_path="${XDG_CONFIG_HOME}/systemd/user/inir.service"
     expected_target="$(doctor_detect_compositor_service 2>/dev/null || true)"
 
+    if inir_user_service_is_masked; then
+        doctor_fail "User inir.service is masked"
+        echo -e "    ${STY_FAINT}Run: inir service install && inir service enable${STY_RST}"
+        return 0
+    fi
+
     if [[ ! -f "$service_path" ]]; then
         if [[ "$installed_strategy" == "package-manager" ]]; then
             doctor_pass "User service not installed"

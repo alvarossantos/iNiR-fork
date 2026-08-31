@@ -410,6 +410,19 @@ function can_elevate() {
   fi
 }
 
+inir_user_service_is_masked() {
+  local service_path="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/inir.service"
+  local state
+
+  if [[ -L "$service_path" ]] && [[ "$(readlink -f "$service_path" 2>/dev/null || true)" == "/dev/null" ]]; then
+    return 0
+  fi
+
+  command -v systemctl >/dev/null 2>&1 || return 1
+  state="$(systemctl --user is-enabled inir.service 2>/dev/null || true)"
+  [[ "$state" == "masked" || "$state" == "masked-runtime" ]]
+}
+
 repair_legacy_quickshell_malloc_environment() {
   local conf="${XDG_CONFIG_HOME:-$HOME/.config}/environment.d/quickshell-mem.conf"
   local repaired=0

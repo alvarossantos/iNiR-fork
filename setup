@@ -219,6 +219,7 @@ sync_user_inir_service_from_repo_if_present() {
     local changed=false
 
     [[ -f "$service_asset" ]] || return 1
+    inir_user_service_is_masked && return 2
     [[ -f "$service_target" ]] || return 1
 
     mkdir -p "$service_target_dir"
@@ -269,6 +270,7 @@ ensure_user_inir_service_enabled() {
     fi
 
     local service_path="${XDG_CONFIG_HOME}/systemd/user/inir.service"
+    inir_user_service_is_masked && return 2
     if [[ ! -f "$service_path" ]]; then
         return 1
     fi
@@ -311,11 +313,15 @@ repair_update_owned_state() {
 
     if [[ "$include_repo_integration" == "true" ]]; then
         sync_launcher_from_repo >/dev/null 2>&1 || tui_warn "Could not refresh the inir launcher"
-        if sync_user_inir_service_from_repo_if_present; then
-            tui_success "Refreshed user inir.service"
-        fi
-        if [[ -f "${XDG_CONFIG_HOME}/systemd/user/inir.service" ]]; then
-            ensure_user_inir_service_enabled >/dev/null 2>&1 || true
+        if inir_user_service_is_masked; then
+            tui_warn "User inir.service is masked; leaving it unchanged (restore with: inir service install && inir service enable)"
+        else
+            if sync_user_inir_service_from_repo_if_present; then
+                tui_success "Refreshed user inir.service"
+            fi
+            if [[ -f "${XDG_CONFIG_HOME}/systemd/user/inir.service" ]]; then
+                ensure_user_inir_service_enabled >/dev/null 2>&1 || true
+            fi
         fi
     fi
 }
@@ -2221,12 +2227,16 @@ run_update() {
 
         repair_update_owned_state false
 
-        ensure_user_inir_service_enabled >/dev/null 2>&1 || true
-        # Only start inir if we're running under a supported compositor.
-        # WAYLAND_DISPLAY alone is not enough — KDE/GNOME set it too.
-        if [[ -n "${NIRI_SOCKET:-}" ]] || pgrep -x niri &>/dev/null || pgrep -x Hyprland &>/dev/null; then
-            systemctl --user reset-failed inir.service >/dev/null 2>&1 || true
-            systemctl --user start inir.service >/dev/null 2>&1 || true
+        if inir_user_service_is_masked; then
+            tui_warn "User inir.service is masked; package-managed update left it unchanged"
+        else
+            ensure_user_inir_service_enabled >/dev/null 2>&1 || true
+            # Only start inir if we're running under a supported compositor.
+            # WAYLAND_DISPLAY alone is not enough — KDE/GNOME set it too.
+            if [[ -n "${NIRI_SOCKET:-}" ]] || pgrep -x niri &>/dev/null || pgrep -x Hyprland &>/dev/null; then
+                systemctl --user reset-failed inir.service >/dev/null 2>&1 || true
+                systemctl --user start inir.service >/dev/null 2>&1 || true
+            fi
         fi
 
         # Even on package-managed installs, refresh the shipped ii-pixel theme from
@@ -2580,20 +2590,24 @@ run_update() {
     repair_update_owned_state false
 
     _step_phase_header 4 "Finalizing"
-    _service_refresh_status=1
-    if sync_user_inir_service_from_repo_if_present; then
-        _service_refresh_status=0
+    if inir_user_service_is_masked; then
+        tui_warn "User inir.service is masked; leaving it unchanged (restore with: inir service install && inir service enable)"
     else
-        _service_refresh_status=$?
-    fi
-    if [[ $_service_refresh_status -eq 0 ]]; then
-        tui_success "Updated existing user inir.service"
-    fi
+        _service_refresh_status=1
+        if sync_user_inir_service_from_repo_if_present; then
+            _service_refresh_status=0
+        else
+            _service_refresh_status=$?
+        fi
+        if [[ $_service_refresh_status -eq 0 ]]; then
+            tui_success "Updated existing user inir.service"
+        fi
 
-    if ensure_user_inir_service_enabled; then
-        tui_success "User inir.service autostart verified"
-    else
-        tui_warn "Could not wire inir.service to the compositor — run 'inir service enable'"
+        if ensure_user_inir_service_enabled; then
+            tui_success "User inir.service autostart verified"
+        else
+            tui_warn "Could not wire inir.service to the compositor — run 'inir service enable'"
+        fi
     fi
 
     local niri_config="${XDG_CONFIG_HOME}/niri/config.kdl"
@@ -2758,19 +2772,23 @@ run_update() {
     # Restart shell (only if we have access to the session)
     if [[ -n "$NIRI_SOCKET" ]] || [[ -n "$WAYLAND_DISPLAY" ]]; then
         _step_phase_start 7 "Restarting shell"
-        if command -v systemctl >/dev/null 2>&1 && systemctl --user cat inir.service >/dev/null 2>&1; then
+        if inir_user_service_is_masked; then
+            _step_phase_done "Shell restart skipped: inir.service is masked"
+        elif command -v systemctl >/dev/null 2>&1 && systemctl --user cat inir.service >/dev/null 2>&1; then
             nohup systemctl --user restart inir.service >/dev/null 2>&1 &
             disown
+            _step_phase_done "Shell restart triggered"
         elif [[ -x "${II_TARGET}/scripts/inir" ]]; then
             nohup bash "${II_TARGET}/scripts/inir" restart -c "${II_TARGET}" >/dev/null 2>&1 &
             disown
+            _step_phase_done "Shell restart triggered"
         else
             qs -p "${II_TARGET}" kill 2>/dev/null || true
             sleep 1
             nohup qs -p "${II_TARGET}" >/dev/null 2>&1 &
             disown
+            _step_phase_done "Shell restart triggered"
         fi
-        _step_phase_done "Shell restart triggered"
     else
         _step_phase_header 7 "Restarting shell"
         tui_warn "Not in graphical session - shell restart skipped"
