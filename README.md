@@ -325,6 +325,7 @@ This fork extends the official [iNiR](https://github.com/snowarch/inir) (v2.29.1
 ## Credits
 
 - [**end-4**](https://github.com/end-4/dots-hyprland): illogical-impulse, the Hyprland dots iNiR forked from
+- [**pctrade/end4-pC**](https://github.com/pctrade/end4-pC): a fork that occasionally has a genuinely good idea
 - [**Gakuseei**](https://github.com/Gakuseei): [Ricelin](https://github.com/Gakuseei/Ricelin), where the pill bar and the washi and flame look come from
 - [**Quickshell**](https://quickshell.outfoxxed.me/): the framework this runs on
 - [**Niri**](https://github.com/YaLTeR/niri): the compositor it's built for

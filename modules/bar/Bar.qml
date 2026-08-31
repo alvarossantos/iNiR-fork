@@ -109,7 +109,7 @@ Scope {
                     }
                 }
                 property bool superShow: false
-                property bool mustShow: hoverRegion.containsMouse || superShow
+                property bool mustShow: hoverRegion.containsMouse || islandsAutoHideEdgeHover.containsMouse || superShow
                     || ShellEditSession.active
                 exclusionMode: ExclusionMode.Ignore
                 exclusiveZone:
@@ -124,7 +124,13 @@ Scope {
                 // input-blocking area at the top of the screen.
                 Item { id: emptyMask; width: 0; height: 0 }
                 mask: Region {
-                    item: hoverMaskRegion
+                    Region {
+                        item: hoverMaskRegion
+                    }
+                    Region {
+                        item: (Config.options?.bar?.autoHide?.enable ?? false) && barContent.isIslands
+                            ? islandsAutoHideEdgeHover : emptyMask
+                    }
                 }
                 color: "transparent"
 
@@ -440,6 +446,19 @@ Scope {
                             }
                         }
                     }
+                }
+
+                MouseArea {
+                    id: islandsAutoHideEdgeHover
+                    hoverEnabled: true
+                    enabled: (Config.options?.bar?.autoHide?.enable ?? false) && barContent.isIslands
+                    anchors {
+                        left: parent.left
+                        right: parent.right
+                        top: (Config.options?.bar?.bottom ?? false) ? undefined : parent.top
+                        bottom: (Config.options?.bar?.bottom ?? false) ? parent.bottom : undefined
+                    }
+                    height: Config.options?.bar?.autoHide?.hoverRegionWidth ?? 2
                 }
             }
         }

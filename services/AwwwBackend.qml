@@ -188,7 +188,8 @@ Singleton {
         return [
             "circlePit", "circleSelect", "magic", "Doom", "Peel", "transition",
             "pixelate", "stripes", "crt", "dissolve", "glitch", "ripple",
-            "shatter", "inirMelt", "inirVeil", "inirFracture", "shaderRandom"
+            "shatter", "inirMelt", "inirVeil", "inirFracture", "inirInk",
+            "inirPrism", "shaderRandom"
         ].includes(String(type ?? ""))
     }
 
