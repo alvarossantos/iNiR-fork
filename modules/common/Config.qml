@@ -1237,6 +1237,9 @@ Singleton {
                             property int spacing: 6
                             property string preset: "default"
                         }
+                        property JsonObject pixel: JsonObject {
+                            property string orientation: "horizontal" // "horizontal" | "vertical"
+                        }
                         property JsonObject quote: JsonObject {
                             property bool enable: false
                             property string text: ""
@@ -1622,6 +1625,91 @@ Singleton {
                         }
                         property real x: 80
                         property real y: 80
+                    }
+
+                    property JsonObject monthCalendar: JsonObject {
+                        property bool enable: false
+                        property bool locked: false
+                        property string placementStrategy: "free"
+                        property int contentWidth: 300
+                        property int contentHeight: 340
+                        property int weekStart: 1 // 0 Sunday, 1 Monday
+                        property bool showAdjacentDays: true
+                        property int widgetScale: 100
+                        property int widgetOpacity: 100
+                        property bool showBackground: true
+                        property bool useBlur: false
+                        property bool showBorder: true
+                        property real backgroundOpacity: 0.14
+                        property real borderWidth: 1
+                        property real borderOpacity: 0.16
+                        property real cornerRadius: -1
+                        property string colorMode: "auto"
+                        property JsonObject palette: JsonObject {
+                            property string primary: "primary"
+                            property string secondary: "secondary"
+                            property string tertiary: "tertiary"
+                            property string signal: "signal"
+                            property string surface: "surface"
+                        }
+                        property int dim: 0
+                        property real x: 420
+                        property real y: 120
+                    }
+
+                    property JsonObject todo: JsonObject {
+                        property bool enable: false
+                        property bool locked: false
+                        property string placementStrategy: "free"
+                        property int contentWidth: 300
+                        property int contentHeight: 276
+                        property int widgetScale: 100
+                        property int widgetOpacity: 100
+                        property bool showBackground: true
+                        property bool useBlur: false
+                        property bool showBorder: true
+                        property real backgroundOpacity: 0.14
+                        property real borderWidth: 1
+                        property real borderOpacity: 0.16
+                        property real cornerRadius: -1
+                        property string colorMode: "auto"
+                        property JsonObject palette: JsonObject {
+                            property string primary: "primary"
+                            property string secondary: "secondary"
+                            property string tertiary: "tertiary"
+                            property string signal: "signal"
+                            property string surface: "surface"
+                        }
+                        property int dim: 0
+                        property real x: 120
+                        property real y: 180
+                    }
+
+                    property JsonObject timers: JsonObject {
+                        property bool enable: false
+                        property bool locked: false
+                        property string placementStrategy: "free"
+                        property bool vertical: false
+                        property int widgetScale: 100
+                        property int widgetOpacity: 100
+                        property bool showBackground: false
+                        property bool useBlur: false
+                        property bool showBorder: false
+                        property real backgroundOpacity: 0
+                        property real borderWidth: 0
+                        property real borderOpacity: 0.16
+                        property real cornerRadius: -1
+                        property string colorMode: "auto"
+                        property JsonObject palette: JsonObject {
+                            property string primary: "primary"
+                            property string secondary: "secondary"
+                            property string tertiary: "tertiary"
+                            property string signal: "signal"
+                            property string surface: "surface"
+                        }
+                        property int dim: 0
+                        property real x: 360
+                        property real y: 420
                     }
 
                     property JsonObject uptime: JsonObject {
