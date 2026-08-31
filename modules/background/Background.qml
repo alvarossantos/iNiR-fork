@@ -672,10 +672,21 @@ Scope {
         // Backdrop mode
         readonly property bool backdropActive: (bgRoot.backgroundOptions.backdrop?.enable ?? false) && (bgRoot.backgroundOptions.backdrop?.hideWallpaper ?? false)
 
+        readonly property bool internalShaderTransitionRequested:
+            (Config.options?.background?.transition?.enable ?? true)
+            && Appearance.animationsEnabled
+            && AwwwBackend.isInternalShaderTransitionType(
+                Config.options?.background?.transition?.type ?? "crossfade")
+            && !bgRoot.wallpaperIsGif
+            && !bgRoot.wallpaperIsVideo
+            && !bgRoot.wallpaperSafetyTriggered
+            && !bgRoot.backdropActive
+
         // awww reveal: when parallax is active and awww handles wallpaper,
         // instantly hide crossfader, let awww transition play, then fade back in.
         property real _awwwRevealOpacity: 1
         readonly property bool _awwwParallaxRevealNeeded: AwwwBackend.active
+            && !bgRoot.internalShaderTransitionRequested
             && bgRoot.dynamicParallaxRequested
             && !bgRoot.wallpaperIsGif
             && !bgRoot.wallpaperIsVideo
@@ -745,7 +756,8 @@ Scope {
             if (bgRoot.wallpaperIsGif || bgRoot.wallpaperIsVideo)
                 return
 
-            const crossfaderTransitionsEnabled = !AwwwBackend.active
+            const crossfaderTransitionsEnabled = (!AwwwBackend.active
+                    || bgRoot.internalShaderTransitionRequested)
                 && (Config.options?.background?.transition?.enable ?? true)
 
             if (!crossfaderTransitionsEnabled && bgRoot._wallpaperTransitionDurationMs <= 0)
@@ -1205,7 +1217,8 @@ Scope {
                 readonly property bool needsStaticTexture: !bgRoot.backdropActive
                     && !bgRoot.wallpaperIsGif && !bgRoot.wallpaperIsVideo
                     && (showInternalStaticWallpaper || localBlurNeedsStaticTexture
-                        || lockBlurNeedsStaticTexture)
+                        || lockBlurNeedsStaticTexture
+                        || bgRoot.internalShaderTransitionRequested)
                 readonly property real panOffsetX: bgRoot.effectiveHasPan ? (bgRoot.panX * (bgRoot.parallaxTotalX / 2)) : 0
                 readonly property real panOffsetY: bgRoot.effectiveHasPan ? (bgRoot.panY * (bgRoot.parallaxTotalY / 2)) : 0
                 readonly property real targetX: useParallax
@@ -1297,7 +1310,8 @@ Scope {
                     id: wallpaper
                     anchors.fill: parent
                     visible: !blurLoader.active && !bgRoot.backdropActive && !bgRoot.wallpaperIsGif && !bgRoot.wallpaperIsVideo
-                    opacity: (wallpaperContainer.showInternalStaticWallpaper ? 1 : 0) * bgRoot._awwwRevealOpacity
+                    opacity: (wallpaperContainer.showInternalStaticWallpaper
+                        || wallpaper.shaderTransitionBusy ? 1 : 0) * bgRoot._awwwRevealOpacity
                     // The backdrop replaces the desktop wallpaper outright: this
                     // crossfader is hidden, blurAlwaysLoader is off, and the lock
                     // blur cannot see it either (an invisible child never reaches
@@ -1306,11 +1320,13 @@ Scope {
                     // an Image with a source decodes whether or not it is visible.
                     layer.enabled: wallpaperContainer.needsStaticTexture
                         && !wallpaperContainer.showInternalStaticWallpaper
+                        && !wallpaper.shaderTransitionBusy
                     source: (bgRoot.wallpaperSafetyTriggered || !wallpaperContainer.needsStaticTexture)
                         ? "" : bgRoot.wallpaperPath
                     // NEVER use crossfader transitions when awww is active — awww handles all transitions.
                     // When parallax is on, the crossfader fades out to reveal awww's native transition.
-                    enableTransitions: !AwwwBackend.active
+                    enableTransitions: (!AwwwBackend.active
+                            || bgRoot.internalShaderTransitionRequested)
                         && (Config.options?.background?.transition?.enable ?? true)
                     transitionType: Config.options?.background?.transition?.type ?? "crossfade"
                     transitionDirection: Config.options?.background?.transition?.direction ?? "right"
@@ -1328,7 +1344,7 @@ Scope {
                     }
 
                     onTransitionStarted: {
-                        if (!bgRoot.dynamicParallaxRequested || !bgRoot.pauseParallaxDuringTransitions || AwwwBackend.active)
+                        if (!bgRoot.dynamicParallaxRequested || !bgRoot.pauseParallaxDuringTransitions)
                             return
                         bgRoot.beginParallaxTransition(true, "wallpaper")
                     }

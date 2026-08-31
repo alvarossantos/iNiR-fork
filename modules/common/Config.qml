@@ -1952,7 +1952,9 @@ Singleton {
                 }
                 property JsonObject transition: JsonObject {
                     property bool enable: true
-                    property string type: "crossfade" // "crossfade" | "slide" | "zoom" | "blurFade"
+                    // awww-native names plus shared internal QML/shader transitions.
+                    // Shader assets are transient overlays; awww remains the final static renderer.
+                    property string type: "crossfade"
                     property string direction: "right"
                     property int duration: 800 // ms
                     property list<var> bezier: [0.54, 0.0, 0.34, 0.99]
