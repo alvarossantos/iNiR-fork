@@ -7,13 +7,24 @@ set -euo pipefail
 preview_dir="$HOME/.cache/inir/window-previews"
 mkdir -p "$preview_dir"
 
-niri_bin="/usr/bin/niri"
-jq_bin="/usr/bin/jq"
-cliphist_bin="/usr/bin/cliphist"
-head_bin="/usr/bin/head"
-wl_paste_bin="/usr/bin/wl-paste"
-wl_copy_bin="/usr/bin/wl-copy"
-sha256_bin="/usr/bin/sha256sum"
+resolve_bin() {
+  local name="$1" path
+  path="$(command -v "$name" 2>/dev/null || true)"
+  if [[ -z "$path" ]]; then
+    echo "[capture-windows] missing binary: $name" >&2
+    return 127
+  fi
+  printf '%s\n' "$path"
+}
+
+niri_bin="$(resolve_bin niri)" || exit $?
+jq_bin="$(resolve_bin jq)" || exit $?
+cliphist_bin="$(resolve_bin cliphist)" || exit $?
+head_bin="$(resolve_bin head)" || exit $?
+grep_bin="$(resolve_bin grep)" || exit $?
+wl_paste_bin="$(resolve_bin wl-paste)" || exit $?
+wl_copy_bin="$(resolve_bin wl-copy)" || exit $?
+sha256_bin="$(resolve_bin sha256sum)" || exit $?
 
 capture_all=false
 ids_to_capture=()
@@ -23,14 +34,6 @@ for arg in "$@"; do
     capture_all=true
   elif [[ "$arg" =~ ^[0-9]+$ ]]; then
     ids_to_capture+=("$arg")
-  fi
-done
-
-for bin in "$niri_bin" "$jq_bin" "$cliphist_bin" "$head_bin" \
-  "$wl_paste_bin" "$wl_copy_bin" "$sha256_bin"; do
-  if [[ ! -x "$bin" ]]; then
-    echo "[capture-windows] missing binary: $bin" >&2
-    exit 127
   fi
 done
 
@@ -45,12 +48,12 @@ select_clipboard_mime() {
     "text/plain" \
     "UTF8_STRING" \
     "image/png"; do
-    if printf '%s\n' "$mime_list" | /usr/bin/grep -Fqx "$preferred"; then
+    if printf '%s\n' "$mime_list" | "$grep_bin" -Fqx "$preferred"; then
       printf '%s\n' "$preferred"
       return
     fi
   done
-  printf '%s\n' "$mime_list" | /usr/bin/head -1
+  printf '%s\n' "$mime_list" | "$head_bin" -1
 }
 
 hash_matches_preview() {
@@ -73,8 +76,9 @@ restore_clipboard_file() {
   # Use a per-capture unit name so an older selection owner can finish its
   # Wayland cancellation path without racing a unit-name reuse.
   local unit="inir-clipboard-owner-${BASHPID:-$$}"
-  if command -v /usr/bin/systemd-run >/dev/null 2>&1; then
-    if /usr/bin/systemd-run \
+  local systemd_run_bin
+  if systemd_run_bin="$(command -v systemd-run 2>/dev/null)"; then
+    if "$systemd_run_bin" \
       --user \
       --quiet \
       --unit="$unit" \
@@ -219,7 +223,7 @@ done
 # If the user copied something else while capture ran, that newer intent wins.
 current_clip_file="$state_dir/current-clipboard.png"
 current_clip_hash=""
-if "$wl_paste_bin" -l 2>/dev/null | /usr/bin/grep -Fqx "image/png"; then
+if "$wl_paste_bin" -l 2>/dev/null | "$grep_bin" -Fqx "image/png"; then
   if "$wl_paste_bin" --type "image/png" >"$current_clip_file" 2>/dev/null; then
     current_clip_hash="$("$sha256_bin" "$current_clip_file" | cut -d' ' -f1)"
   fi

@@ -118,7 +118,7 @@ For useful default shortcuts, merge iNiR actions into `programs.niri.settings.bi
 If you manage your user session with Home Manager, import the Home Manager module instead:
 
 ```nix
-{ inputs, ... }: {
+{ inputs, pkgs, ... }: {
   imports = [
     inputs.inir.homeModules.inir
   ];
@@ -126,9 +126,13 @@ If you manage your user session with Home Manager, import the Home Manager modul
   programs.inir = {
     enable = true;
     service.compositor = "niri";
+    extraPackages = [ pkgs.niri ];
   };
 }
 ```
+
+`extraPackages` is added to the Home Manager service `PATH`. If your Niri session
+uses a different package, put that matching package there instead.
 
 The Home Manager module can also expose the packaged runtime at:
 

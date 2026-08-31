@@ -307,6 +307,13 @@ if ! grep -Fq 'requestedWindowMaxAgeMs' "$preview_service" \
     printf 'FAIL: Orbit preview freshness/quality policy regressed\n' >&2
     exit 1
 fi
+home_nix_module="$runtime_root/nix/home-module.nix"
+if ! grep -Fq 'path="$(command -v "$name" 2>/dev/null || true)"' "$preview_capture" \
+        || grep -Fq '[[ ! -x "$bin" ]]' "$preview_capture" \
+        || ! grep -Fq 'PATH = lib.makeBinPath ([ cfg.package ] ++ cfg.extraPackages);' "$home_nix_module"; then
+    printf 'FAIL: packaged Nix preview dependencies are not resolved through the service PATH\n' >&2
+    exit 1
+fi
 if grep -Fq 'NavigationFineControls { visible: !root.workspaceMode }' "$orbit_studio" \
         || grep -Fq 'PresentationFineControls { visible: !root.workspaceMode }' "$orbit_studio"; then
     printf 'FAIL: Orbit Studio Motion exposes advanced tuning in the primary workflow\n' >&2
