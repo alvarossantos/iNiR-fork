@@ -8,6 +8,7 @@ iNiR provides a flake with:
 |---|---|
 | `packages.<system>.default` | Packaged iNiR runtime and `inir` launcher |
 | `packages.<system>.inir-mascot` | Optional mascot art pack companion package |
+| `packages.<system>.inir-with-mascot` | Ready-to-use iNiR package with the mascot art pack |
 | `nixosModules.inir` | NixOS module for system package + user service |
 | `homeModules.inir` | Home Manager module for user package + user service |
 
@@ -39,15 +40,14 @@ in
 
 For Home Manager, import `nix/home-module.nix` instead. The package expression accepts the consumer's `pkgs` set explicitly, so traditional configurations can choose or pin nixpkgs without converting the project to a flake. Both modules use that same package expression by default unless `programs.inir.package` is overridden.
 
-## With niri-flake
+## With Niri on NixOS
 
-Add both flakes:
+Add iNiR to your flake inputs:
 
 ```nix
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    niri.url = "github:sodiboo/niri-flake";
     inir.url = "github:snowarch/inir";
   };
 }
@@ -57,12 +57,11 @@ The default input tracks the stable branch. To test development builds before
 they reach `main`, point the iNiR input at `github:snowarch/inir/prerelease`
 instead and rebuild through Nix.
 
-Then import both modules in your NixOS configuration:
+Then import the iNiR module in your NixOS configuration:
 
 ```nix
 { config, inputs, ... }: {
   imports = [
-    inputs.niri.nixosModules.niri
     inputs.inir.nixosModules.inir
   ];
 
@@ -79,6 +78,8 @@ Then import both modules in your NixOS configuration:
 `programs.inir.service.compositor = "niri"` creates the user unit wiring under `niri.service.wants/inir.service`. It does not wire iNiR to `graphical-session.target`, so it will not auto-start under KDE, GNOME, or other desktop sessions.
 
 `extraPackages = [ config.programs.niri.package ];` puts the same `niri` client binary used by your compositor on iNiR's runtime `PATH`, so features that call `niri msg` use the matching package.
+
+NixOS already provides Niri through `programs.niri.enable`. A separate `niri-flake` input is not required for a normal installation; use one only when you specifically need what that external flake provides.
 
 Recorder runtime dependencies are provided by the iNiR package itself, including
 `wf-recorder`, `slurp`, `xdg-user-dirs`, `xdg-utils`, PipeWire/Pulse tooling, and
@@ -143,28 +144,16 @@ programs.inir.configSymlink.enable = true;
 
 ## Optional mascot art pack
 
-The mascot artwork is distributed separately from the shell runtime. The flake
-exposes the current art pack as `packages.<system>.inir-mascot`. Combine it with
-the main package when you want the full mascot asset set:
+The mascot artwork stays optional, matching the normal iNiR install. Nix cannot
+add files to an existing store path, so the flake exposes a ready-to-use combined
+package:
 
 ```nix
-{ inputs, pkgs, ... }:
-let
-  inirWithMascot = pkgs.symlinkJoin {
-    name = "inir-with-mascot";
-    paths = [
-      inputs.inir.packages.${pkgs.system}.default
-      inputs.inir.packages.${pkgs.system}.inir-mascot
-    ];
-  };
-in
-{
-  programs.inir.package = inirWithMascot;
-}
+programs.inir.package = inputs.inir.packages.${pkgs.system}.inir-with-mascot;
 ```
 
-The companion package is pinned to a mascot release; updating the art pack does
-not mutate the immutable iNiR package in place.
+`packages.<system>.inir-mascot` remains available as the standalone art pack for
+custom package composition. Both outputs use the same pinned mascot release.
 
 ## Hyprland
 

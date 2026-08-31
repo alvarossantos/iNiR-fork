@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Mascot sprites on NixOS**: `packages.<system>.inir-with-mascot` now provides a ready-to-use iNiR package with the optional mascot art pack, without requiring users to assemble a `symlinkJoin` themselves.
+
 ## [2.29.3] - 2026-08-25
 
 A polish release for Pill controls and surfaces, settings navigation, TUI app themes, and several runtime fixes including privileged graphical apps and audio feedback stability.
