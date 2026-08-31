@@ -36,6 +36,12 @@ if ! grep -Fq 'property var _trayService: TrayService' "$runtime_root/shell.qml"
     printf 'FAIL: shell startup does not instantiate the StatusNotifier watcher\n' >&2
     exit 1
 fi
+if grep -q '^Environment=MALLOC_' "$service_unit" \
+        || grep -Eq '^[[:space:]]*export[[:space:]]+MALLOC_' "$runtime_root/scripts/inir" \
+        || grep -Eq '^[[:space:]]*export[[:space:]]+MALLOC_' "$runtime_root/scripts/quickshell-env.sh"; then
+    printf 'FAIL: iNiR still overrides the glibc allocator at runtime\n' >&2
+    exit 1
+fi
 
 step "fresh install defaults"
 python3 - "$runtime_root" <<'PY'
@@ -210,6 +216,36 @@ if ! grep -Fq 'vars_to_import+=("DISPLAY=$DISPLAY")' "$inir_launcher" \
         || ! grep -Fq 'for _xsock in /tmp/.X11-unix/X*' "$inir_launcher" \
         || ! grep -Fq 'systemctl --user set-environment "${vars_to_import[@]}"' "$inir_launcher"; then
     printf 'FAIL: session environment does not publish the XWayland DISPLAY to the user manager\n' >&2
+    exit 1
+fi
+if grep -Fq 'MALLOC_ARENA_MAX' "$shell_exec" \
+        || grep -Fq 'MALLOC_MMAP_THRESHOLD_' "$shell_exec"; then
+    printf 'FAIL: application launch policy still carries retired allocator handling\n' >&2
+    exit 1
+fi
+
+terminal_launcher="$runtime_root/scripts/launch-terminal.sh"
+browser_launcher_block="$(sed -n '/^launch_configured_browser()/,/^}/p' "$inir_launcher")"
+if grep -Fq 'systemd-run --user --scope' "$terminal_launcher" \
+        || grep -Fq 'systemd-run --user --scope' <<< "$browser_launcher_block"; then
+    printf 'FAIL: Niri terminal/browser launchers create a redundant nested systemd scope\n' >&2
+    exit 1
+fi
+
+if [[ -e "$runtime_root/sdata/migrations/037-scope-quickshell-malloc-env.sh" ]]; then
+    printf 'FAIL: allocator cleanup was added as a second migration instead of update/doctor repair\n' >&2
+    exit 1
+fi
+
+migration_lib="$runtime_root/sdata/lib/migrations.sh"
+repair_lib="$runtime_root/sdata/lib/functions.sh"
+doctor_lib="$runtime_root/sdata/lib/doctor.sh"
+if ! grep -Fq '"014-malloc-arena-optimization"' "$migration_lib" \
+        || ! grep -Fq 'is_migration_retired "$migration_id" && return 1' "$migration_lib" \
+        || ! grep -Fq 'repair_legacy_quickshell_malloc_environment()' "$repair_lib" \
+        || ! grep -Fq 'repair_legacy_quickshell_malloc_environment' "$runtime_root/setup" \
+        || ! grep -Fq 'repair_legacy_quickshell_malloc_environment' "$doctor_lib"; then
+    printf 'FAIL: retired allocator migration is not repaired through install/update/doctor\n' >&2
     exit 1
 fi
 

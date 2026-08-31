@@ -409,3 +409,51 @@ function can_elevate() {
     return 1  # No way to elevate
   fi
 }
+
+repair_legacy_quickshell_malloc_environment() {
+  local conf="${XDG_CONFIG_HOME:-$HOME/.config}/environment.d/quickshell-mem.conf"
+  local repaired=0
+  local legacy_owned=false
+
+  INIR_LEGACY_MALLOC_ENV_REPAIRED=0
+
+  if [[ -f "$conf" ]] && grep -Eq \
+      '^[[:space:]]*MALLOC_ARENA_MAX=2[[:space:]]*$|^[[:space:]]*MALLOC_MMAP_THRESHOLD_=131072[[:space:]]*$' \
+      "$conf" 2>/dev/null; then
+    legacy_owned=true
+    local tmp="${conf}.inir-repair.$$"
+
+    if ! grep -Ev \
+        '^[[:space:]]*MALLOC_ARENA_MAX=2[[:space:]]*$|^[[:space:]]*MALLOC_MMAP_THRESHOLD_=131072[[:space:]]*$|^# Quickshell/iNiR memory optimization[[:space:]]*$|^# Prevents glibc malloc arenas from retaining freed wallpaper textures\.[[:space:]]*$|^# See: scripts/quickshell-env\.sh for details\.[[:space:]]*$' \
+        "$conf" > "$tmp"; then
+      rm -f "$tmp"
+      return 1
+    fi
+
+    if grep -q '[^[:space:]]' "$tmp" 2>/dev/null; then
+      mv "$tmp" "$conf"
+    else
+      rm -f "$tmp" "$conf"
+    fi
+    repaired=1
+  fi
+
+  if $legacy_owned; then
+    [[ "${MALLOC_ARENA_MAX:-}" == "2" ]] && unset MALLOC_ARENA_MAX
+    [[ "${MALLOC_MMAP_THRESHOLD_:-}" == "131072" ]] && unset MALLOC_MMAP_THRESHOLD_
+
+    if command -v systemctl >/dev/null 2>&1; then
+      local manager_env=""
+      manager_env="$(systemctl --user show-environment 2>/dev/null || true)"
+      if grep -qx 'MALLOC_ARENA_MAX=2' <<< "$manager_env"; then
+        systemctl --user unset-environment MALLOC_ARENA_MAX >/dev/null 2>&1 || true
+      fi
+      if grep -qx 'MALLOC_MMAP_THRESHOLD_=131072' <<< "$manager_env"; then
+        systemctl --user unset-environment MALLOC_MMAP_THRESHOLD_ >/dev/null 2>&1 || true
+      fi
+    fi
+  fi
+
+  INIR_LEGACY_MALLOC_ENV_REPAIRED=$repaired
+  return 0
+}

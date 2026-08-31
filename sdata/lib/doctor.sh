@@ -1400,6 +1400,13 @@ check_wallpaper_health() {
 check_environment_vars() {
     local venv_path="${XDG_STATE_HOME:-$HOME/.local/state}/quickshell/.venv"
     local fixed=0
+    local legacy_malloc_repaired=0
+
+    if repair_legacy_quickshell_malloc_environment; then
+        legacy_malloc_repaired="${INIR_LEGACY_MALLOC_ENV_REPAIRED:-0}"
+    else
+        doctor_fail "Could not clean legacy Quickshell allocator environment"
+    fi
     
     # Check bash — look for INIR_VENV (canonical) or ILLOGICAL_IMPULSE_VIRTUAL_ENV (legacy)
     if [[ -f "$HOME/.bashrc" ]] && ! grep -q "INIR_VENV" "$HOME/.bashrc" 2>/dev/null; then
@@ -1437,6 +1444,10 @@ ZEOF
         ((fixed++)) || true
     fi
     
+    if [[ $legacy_malloc_repaired -gt 0 ]]; then
+        doctor_fix "Removed legacy global Quickshell allocator tuning"
+    fi
+
     if [[ $fixed -gt 0 ]]; then
         doctor_fix "Added environment variables to $fixed shell profile(s)"
     else

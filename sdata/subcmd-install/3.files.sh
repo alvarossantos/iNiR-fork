@@ -626,6 +626,8 @@ if [[ "${SKIP_MIGRATIONS}" != "true" ]]; then
   run_migrations_auto
 fi
 
+repair_legacy_quickshell_malloc_environment || true
+
 #####################################################################################
 # Mark first run complete
 #####################################################################################
