@@ -554,6 +554,25 @@ if ! grep -Fq 'restore_saved_clipboard' "$preview_capture" \
     printf 'FAIL: window preview capture can leave Niri screenshot PNGs in the user clipboard\n' >&2
     exit 1
 fi
+preview_image_store="$runtime_root/scripts/clipboard-image-store.sh"
+if [[ ! -x "$preview_image_store" ]] \
+        || ! grep -Fq 'inir-window-preview-capture-' "$preview_capture" \
+        || ! grep -Fq 'inir-window-preview-capture-' "$preview_image_store" \
+        || ! grep -Fq 'clipboard-image-store.sh' "$runtime_root/defaults/niri/config.d/50-startup.kdl"; then
+    printf 'FAIL: internal window previews can leak into cliphist image history\n' >&2
+    exit 1
+fi
+if ! grep -Fq 'previewRefreshTimer' "$runtime_root/modules/dock/DockPreview.qml" \
+        || ! grep -Fq 'pendingPreviewIds' "$runtime_root/modules/dock/DockPreview.qml" \
+        || ! grep -Fq 'hoverDelayTimer.stop()' "$runtime_root/modules/dock/DockAppButton.qml"; then
+    printf 'FAIL: dock clicks can race window-preview capture and user paste\n' >&2
+    exit 1
+fi
+if ! grep -Fq 'windowPreviewCaptureActive' "$runtime_root/services/Notifications.qml" \
+        || ! grep -Fq 'paste the image from the clipboard' "$runtime_root/services/Notifications.qml"; then
+    printf 'FAIL: internal Niri preview screenshot notifications are not suppressed safely\n' >&2
+    exit 1
+fi
 if ! grep -Fq 'requestedWindowMaxAgeMs' "$preview_service" \
         || ! grep -Fq 'markPreviewDirty(root.lastFocusedWindowId)' "$preview_service" \
         || ! grep -Fq '"-printf", "%f\\t%T@\\n"' "$preview_service" \

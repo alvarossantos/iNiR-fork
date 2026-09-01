@@ -38,7 +38,13 @@ for arg in "$@"; do
 done
 
 state_dir="$(mktemp -d -t inir-window-previews.XXXXXX)"
-trap 'rm -rf -- "$state_dir"' EXIT
+preview_marker="${XDG_RUNTIME_DIR:-/tmp}/inir-window-preview-capture-${UID:-$(id -u)}"
+
+cleanup_exit() {
+  rm -f -- "$preview_marker" 2>/dev/null || true
+  rm -rf -- "$state_dir"
+}
+trap cleanup_exit EXIT INT TERM
 
 select_clipboard_mime() {
   local mime_list preferred
@@ -147,6 +153,12 @@ if [[ -n "$first_entry" ]]; then
     before_id=0
   fi
 fi
+
+# Mark the batch before Niri changes the clipboard. The image watcher routes
+# through clipboard-image-store.sh, which consumes these internal frames instead
+# of forwarding them to cliphist. The marker contains our PID so a stale file
+# after an unclean shutdown cannot disable image history permanently.
+printf '%s\n' "${BASHPID:-$$}" >"$preview_marker"
 
 # niri screenshot-window always publishes to the global clipboard, even with
 # --path. Serializing captures avoids multiple compositor actions racing that
