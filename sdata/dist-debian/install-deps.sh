@@ -50,69 +50,117 @@ if [[ -n "${ONLY_MISSING_DEPS:-}" ]]; then
   installflags=""
   $ask || installflags="-y"
 
-  # Map command IDs (from doctor) to Debian/Ubuntu package names.
+  # Doctor reports command IDs, never package names. Keep this explicit so an
+  # unknown command can never leak into apt as if it were a Debian package.
   declare -A cmd_to_pkg=(
-    [qs]="quickshell"
-    [niri]="niri"
-    [nmcli]="network-manager"
-    [wpctl]="wireplumber"
-    [jq]="jq"
-    [rsync]="rsync"
-    [curl]="curl"
-    [git]="git"
-    [python3]="python3"
-    [wlsunset]="wlsunset"
-    [dunstify]="dunst"
-    [fish]="fish"
-    [magick]="imagemagick"
-    [swaylock]="swaylock"
-    [swayidle]="swayidle"
-    [grim]="grim"
-    [mpv]="mpv"
-    [cliphist]="cliphist"
-    [wl-copy]="wl-clipboard"
-    [wl-paste]="wl-clipboard"
-    [fuzzel]="fuzzel"
-    [gum]="gum"
-    [hyprpicker]="hyprpicker"
-    [xwayland-satellite]="xwayland-satellite"
-    [missioncenter]="io.missioncenter.MissionCenter"
+    [qs]="quickshell" [niri]="niri" [nmcli]="network-manager" [wpctl]="wireplumber"
+    [jq]="jq" [rsync]="rsync" [curl]="curl" [git]="git" [python3]="python3"
+    [fish]="fish" [magick]="imagemagick" [grim]="grim" [cliphist]="cliphist"
+    [wl-copy]="wl-clipboard" [wl-paste]="wl-clipboard" [fuzzel]="fuzzel"
+    [hyprpicker]="hyprpicker" [playerctl]="playerctl" [notify-send]="libnotify-bin"
+    [flock]="util-linux" [wlsunset]="wlsunset" [easyeffects]="easyeffects"
+    [uv]="uv" [cava]="cava" [qalc]="qalc" [yt-dlp]="yt-dlp" [socat]="socat"
+    [brightnessctl]="brightnessctl" [slurp]="slurp" [wf-recorder]="wf-recorder"
+    [ffmpeg]="ffmpeg" [swappy]="swappy" [tesseract]="tesseract-ocr"
+    [blueman-manager]="blueman" [kwriteconfig6]="libkf6config-bin" [ddcutil]="ddcutil"
+    [nm-connection-editor]="network-manager-gnome" [xdg-settings]="xdg-utils" [mpv]="mpv"
+    [swaylock]="swaylock" [swayidle]="swayidle" [trans]="translate-shell"
+    [ocr-eng]="tesseract-ocr-eng" [ocr-spa]="tesseract-ocr-spa" [ocr-rus]="tesseract-ocr-rus"
+    [ocr-jpn]="tesseract-ocr-jpn" [ocr-jpn-vert]="tesseract-ocr-jpn-vert"
+    [ocr-chi-sim]="tesseract-ocr-chi-sim" [ocr-chi-sim-vert]="tesseract-ocr-chi-sim-vert"
+    [ocr-chi-tra]="tesseract-ocr-chi-tra" [ocr-chi-tra-vert]="tesseract-ocr-chi-tra-vert"
   )
 
   _deb_miss_cmds=()
   _deb_requested_pkgs=()
   _deb_installable_pkgs=()
+  _deb_special_cmds=()
+  _deb_unresolved=()
   read -r -a _deb_miss_cmds <<<"$ONLY_MISSING_DEPS"
 
   for cmd in "${_deb_miss_cmds[@]}"; do
-    _deb_pkg="${cmd_to_pkg[$cmd]:-$cmd}"
-    [[ " ${_deb_requested_pkgs[*]} " == *" ${_deb_pkg} "* ]] || _deb_requested_pkgs+=("$_deb_pkg")
+    case "$cmd" in
+      awww|awww-daemon|gowall|missioncenter|songrec|xwayland-satellite)
+        [[ " ${_deb_special_cmds[*]} " == *" ${cmd} "* ]] || _deb_special_cmds+=("$cmd")
+        ;;
+      checkupdates|go)
+        # Legacy/Arch-only or build-only Doctor output.
+        ;;
+      *)
+        _deb_pkg="${cmd_to_pkg[$cmd]:-}"
+        if [[ -z "$_deb_pkg" ]]; then
+          log_warning "No Debian repair mapping for Doctor command: $cmd"
+          _deb_unresolved+=("$cmd")
+        elif apt-cache show "$_deb_pkg" &>/dev/null 2>&1; then
+          [[ " ${_deb_requested_pkgs[*]} " == *" ${_deb_pkg} "* ]] || _deb_requested_pkgs+=("$_deb_pkg")
+        else
+          log_warning "Debian package unavailable for $cmd: $_deb_pkg"
+          _deb_unresolved+=("$cmd")
+        fi
+        ;;
+    esac
   done
 
-  for pkg in "${_deb_requested_pkgs[@]}"; do
-    if apt-cache show "$pkg" &>/dev/null 2>&1; then
-      _deb_installable_pkgs+=("$pkg")
-    else
-      log_warning "Package not available in current repos: $pkg"
-    fi
-  done
-
-  if [[ ${#_deb_installable_pkgs[@]} -gt 0 ]]; then
+  if [[ ${#_deb_requested_pkgs[@]} -gt 0 ]]; then
     case ${SKIP_SYSUPDATE:-false} in
       true) log_info "Skipping system update" ;;
       *) v sudo apt update ;;
     esac
+    sudo apt install $installflags "${_deb_requested_pkgs[@]}" || return 1
+  fi
 
-    if ! sudo apt install $installflags "${_deb_installable_pkgs[@]}" 2>/dev/null; then
-      log_warning "Batch install failed, trying individually..."
-      for pkg in "${_deb_installable_pkgs[@]}"; do
-        sudo apt install $installflags "$pkg" 2>/dev/null || \
-          log_warning "Could not install $pkg"
-      done
+  # Providers which are not native apt packages. Mission Center intentionally
+  # uses Flatpak on Debian; expose a host wrapper because iNiR's launcher and
+  # Doctor work with executable commands, not desktop-file-only Flatpak apps.
+  if [[ " ${_deb_special_cmds[*]} " == *" missioncenter " ]] && ! command -v missioncenter &>/dev/null; then
+    sudo apt install $installflags flatpak >/dev/null 2>&1 || true
+    if command -v flatpak &>/dev/null; then
+      flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo >/dev/null 2>&1 || true
+      if flatpak install -y --user flathub io.missioncenter.MissionCenter >/dev/null 2>&1; then
+        _mc_wrapper="$(mktemp /tmp/inir-missioncenter.XXXXXX)"
+        printf '%s\n' '#!/bin/sh' 'exec flatpak run io.missioncenter.MissionCenter "$@"' > "$_mc_wrapper"
+        sudo install -m 0755 "$_mc_wrapper" /usr/local/bin/missioncenter
+        rm -f "$_mc_wrapper"
+      fi
     fi
   fi
 
+  if [[ " ${_deb_special_cmds[*]} " == *" gowall " ]] && ! command -v gowall &>/dev/null; then
+    sudo apt install $installflags golang-go >/dev/null 2>&1 || true
+    if command -v go &>/dev/null; then
+      _gowall_build="$(mktemp -d /tmp/inir-gowall.XXXXXX)"
+      if git clone --depth 1 https://github.com/Achno/gowall.git "$_gowall_build/src" >/dev/null 2>&1 \
+          && (cd "$_gowall_build/src" && go build -o "$_gowall_build/gowall" . >/dev/null 2>&1); then
+        sudo install -m 0755 "$_gowall_build/gowall" /usr/local/bin/gowall
+      fi
+      rm -rf "$_gowall_build"
+    fi
+  fi
+
+  # The remaining special providers already have mature paths later in the full
+  # Debian installer (repository/PPA first, then source). Re-enter once with the
+  # missing-only flag cleared; package checks make already-satisfied work cheap.
+  _deb_need_full_provider=false
+  for cmd in "${_deb_special_cmds[@]}"; do
+    case "$cmd" in awww|awww-daemon|songrec|xwayland-satellite) _deb_need_full_provider=true ;; esac
+  done
   unset ONLY_MISSING_DEPS
+  if $_deb_need_full_provider; then
+    SKIP_SYSUPDATE=true
+    source "${REPO_ROOT}/sdata/dist-debian/install-deps.sh"
+  fi
+
+  for cmd in "${_deb_special_cmds[@]}"; do
+    case "$cmd" in
+      awww|awww-daemon) command -v awww &>/dev/null && command -v awww-daemon &>/dev/null || _deb_unresolved+=("awww") ;;
+      *) command -v "$cmd" &>/dev/null || _deb_unresolved+=("$cmd") ;;
+    esac
+  done
+
+  if [[ ${#_deb_unresolved[@]} -gt 0 ]]; then
+    log_error "Could not repair Debian dependencies: $(printf '%s ' "${_deb_unresolved[@]}")"
+    return 1
+  fi
   return 0
 fi
 
@@ -877,15 +925,57 @@ if ! command -v songrec &>/dev/null; then
     
     # Rust is only needed when the repository/PPA paths above were unavailable.
     if ensure_rust_toolchain; then
-      if cargo install songrec 2>/dev/null; then
+      SONGREC_ROOT="$(mktemp -d /tmp/inir-songrec.XXXXXX)"
+      if cargo install --root "$SONGREC_ROOT" songrec 2>/dev/null \
+          && [[ -x "$SONGREC_ROOT/bin/songrec" ]]; then
+        sudo install -m 0755 "$SONGREC_ROOT/bin/songrec" /usr/local/bin/songrec
         log_success "songrec installed via Cargo"
         SONGREC_INSTALLED=true
       else
         log_warning "songrec build failed"
       fi
+      rm -rf "$SONGREC_ROOT"
     else
       log_warning "Cargo not available, skipping songrec source fallback"
     fi
+  fi
+fi
+
+# Mission Center - Debian/Ubuntu provider. Flathub is the cross-distro
+# package source already documented by iNiR; add a host command wrapper so the
+# launcher and Doctor can treat it like every other configured application.
+if ! command -v missioncenter &>/dev/null; then
+  log_info "Installing Mission Center from Flathub..."
+  sudo apt install $installflags flatpak >/dev/null 2>&1 || true
+  if command -v flatpak &>/dev/null; then
+    flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo >/dev/null 2>&1 || true
+    if flatpak install -y --user flathub io.missioncenter.MissionCenter >/dev/null 2>&1; then
+      _mc_wrapper="$(mktemp /tmp/inir-missioncenter.XXXXXX)"
+      printf '%s\n' '#!/bin/sh' 'exec flatpak run io.missioncenter.MissionCenter "$@"' > "$_mc_wrapper"
+      sudo install -m 0755 "$_mc_wrapper" /usr/local/bin/missioncenter
+      rm -f "$_mc_wrapper"
+      log_success "Mission Center installed"
+    else
+      log_warning "Mission Center Flatpak installation failed"
+    fi
+  fi
+fi
+
+# Gowall - no stable Debian package is assumed. Build the tiny Go CLI only when
+# the exposed wallpaper editor needs its command and it is not already present.
+if ${INSTALL_TOOLKIT:-true} && ! command -v gowall &>/dev/null; then
+  log_info "Installing gowall wallpaper editor..."
+  sudo apt install $installflags golang-go >/dev/null 2>&1 || true
+  if command -v go &>/dev/null; then
+    _gowall_build="$(mktemp -d /tmp/inir-gowall.XXXXXX)"
+    if git clone --depth 1 https://github.com/Achno/gowall.git "$_gowall_build/src" >/dev/null 2>&1 \
+        && (cd "$_gowall_build/src" && go build -o "$_gowall_build/gowall" . >/dev/null 2>&1); then
+      sudo install -m 0755 "$_gowall_build/gowall" /usr/local/bin/gowall
+      log_success "gowall installed"
+    else
+      log_warning "gowall source build failed"
+    fi
+    rm -rf "$_gowall_build"
   fi
 fi
 
