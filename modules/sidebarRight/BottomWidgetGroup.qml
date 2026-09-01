@@ -98,8 +98,11 @@ Rectangle {
         }
     }
 
-    // Signal to open events dialog (propagated from EventsWidget)
+    // Signals consumed by SidebarRightContent.
     signal openEventsDialog(var editEvent)
+    signal requestExpand(string widgetType)
+    readonly property string activeTabType: root.tabs[root.selectedTab]?.type ?? ""
+    readonly property bool activeTabExpandable: ["calendar", "events", "todo"].indexOf(root.activeTabType) !== -1
 
     // Events component
     Component {
@@ -299,10 +302,33 @@ Rectangle {
                 }
             }
 
+            CalendarHeaderButton {
+                id: expandBtn
+                visible: root.activeTabExpandable
+                height: implicitHeight
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: collapseBtn.bottom
+                anchors.topMargin: 2
+                forceCircle: true
+                colBackground: "transparent"
+                downAction: () => root.requestExpand(root.activeTabType)
+                contentItem: Item {
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        text: "open_in_full"
+                        iconSize: Appearance.font.pixelSize.normal
+                        color: Appearance.zzzEverywhere ? Appearance.zzz.accent
+                            : Appearance.inirEverywhere ? Appearance.inir.colPrimary
+                            : Appearance.colors.colPrimary
+                    }
+                }
+                StyledToolTip { text: Translation.tr("Open full view") }
+            }
+
             // Scrollable tab buttons
             Flickable {
                 id: railFlickable
-                anchors.top: collapseBtn.bottom
+                anchors.top: expandBtn.visible ? expandBtn.bottom : collapseBtn.bottom
                 anchors.topMargin: 4
                 anchors.bottom: parent.bottom
                 anchors.left: parent.left
