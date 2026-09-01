@@ -31,7 +31,7 @@ Scope {
     }
     property string currentIndicator: "volume"
     property bool _syncingOpenStates: false
-    readonly property bool osdActive: GlobalStates.osdVolumeOpen || GlobalStates.osdBrightnessOpen || GlobalStates.osdMicOpen || GlobalStates.osdMediaOpen || GlobalStates.osdKeyboardLayoutOpen || GlobalStates.osdTouchpadOpen
+    readonly property bool osdActive: GlobalStates.osdVolumeOpen || GlobalStates.osdBrightnessOpen || GlobalStates.osdMicOpen || GlobalStates.osdMediaOpen || GlobalStates.osdKeyboardLayoutOpen || GlobalStates.osdTouchpadOpen || GlobalStates.osdRgbOpen || GlobalStates.osdFanOpen
     readonly property bool mediaOsdVisible: GlobalStates.osdMediaOpen
         && root.currentIndicator === "media"
     property bool _surfaceRetained: false
@@ -65,9 +65,17 @@ Scope {
             id: "touchpad",
             sourceUrl: "indicators/TouchpadIndicator.qml"
         },
+        {
+            id: "rgb",
+            sourceUrl: "indicators/RgbIndicator.qml"
+        },
+        {
+            id: "fan",
+            sourceUrl: "indicators/FanIndicator.qml"
+        },
     ]
 
-    function setOpenStates(volume, brightness, mic, media, keyboardLayout, touchpad) {
+    function setOpenStates(volume, brightness, mic, media, keyboardLayout, touchpad, rgb, fan) {
         root._syncingOpenStates = true;
         GlobalStates.osdVolumeOpen = volume;
         GlobalStates.osdBrightnessOpen = brightness;
@@ -75,13 +83,15 @@ Scope {
         GlobalStates.osdMediaOpen = media;
         GlobalStates.osdKeyboardLayoutOpen = keyboardLayout;
         GlobalStates.osdTouchpadOpen = touchpad;
+        GlobalStates.osdRgbOpen = rgb;
+        GlobalStates.osdFanOpen = fan;
         root._syncingOpenStates = false;
         root._reconcilePresentation()
     }
 
     function hideOsd() {
         osdTimeout.stop();
-        root.setOpenStates(false, false, false, false, false, false);
+        root.setOpenStates(false, false, false, false, false, false, false, false);
         root.protectionMessage = "";
     }
 
@@ -127,7 +137,9 @@ Scope {
             indicator === "mic",
             indicator === "media",
             indicator === "keyboardLayout",
-            indicator === "touchpad"
+            indicator === "touchpad",
+            indicator === "rgb",
+            indicator === "fan"
         );
         if (autoHide)
             osdTimeout.restart();
@@ -281,6 +293,22 @@ Scope {
     }
 
     Connections {
+        target: RgbService
+        function onPopupSequenceChanged() {
+            root.currentIndicator = "rgb";
+            root.triggerOsd();
+        }
+    }
+
+    Connections {
+        target: FanService
+        function onPopupSequenceChanged() {
+            root.currentIndicator = "fan";
+            root.triggerOsd();
+        }
+    }
+
+    Connections {
         target: MprisController
         function onTrackChanged(reverse: bool): void {
             if (root.mediaOsdVisible)
@@ -310,10 +338,10 @@ Scope {
 
                 WlrLayershell.namespace: "quickshell:onScreenDisplay"
             WlrLayershell.layer: WlrLayer.Overlay
-            anchors {
-                top: root.currentIndicator === "keyboardLayout" || root.currentIndicator === "touchpad" ? true : !(Config.options?.bar?.bottom ?? false)
-                bottom: root.currentIndicator === "keyboardLayout" || root.currentIndicator === "touchpad" ? false : Config.options?.bar?.bottom ?? false
-            }
+                anchors {
+                    top: root.currentIndicator === "keyboardLayout" || root.currentIndicator === "touchpad" || root.currentIndicator === "rgb" || root.currentIndicator === "fan" ? true : !(Config.options?.bar?.bottom ?? false)
+                    bottom: root.currentIndicator === "keyboardLayout" || root.currentIndicator === "touchpad" || root.currentIndicator === "rgb" || root.currentIndicator === "fan" ? false : Config.options?.bar?.bottom ?? false
+                }
             mask: Region {
                 item: osdValuesWrapper
             }
@@ -332,7 +360,7 @@ Scope {
                 id: columnLayout
                 anchors.horizontalCenter: parent.horizontalCenter
 
-                readonly property bool entersFromTop: root.currentIndicator === "keyboardLayout" || root.currentIndicator === "touchpad"
+                readonly property bool entersFromTop: root.currentIndicator === "keyboardLayout" || root.currentIndicator === "touchpad" || root.currentIndicator === "rgb" || root.currentIndicator === "fan"
                     || !(Config.options?.bar?.bottom ?? false)
                 property real openProgress: root._visualOpen ? 1 : 0
                 transformOrigin: entersFromTop ? Item.Top : Item.Bottom

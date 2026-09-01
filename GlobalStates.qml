@@ -49,6 +49,8 @@ Singleton {
 
     property bool osdKeyboardLayoutOpen: false
     property bool osdTouchpadOpen: false
+    property bool osdRgbOpen: false
+    property bool osdFanOpen: false
     property bool oskOpen: false
     property bool overlayOpen: false
     property bool overviewOpen: false

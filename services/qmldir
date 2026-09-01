@@ -31,6 +31,8 @@ singleton Hyprsunset 1.0 Hyprsunset.qml
 singleton IconThemeService 1.0 IconThemeService.qml
 singleton Idle 1.0 Idle.qml
 singleton TouchpadService 1.0 TouchpadService.qml
+singleton RgbService 1.0 RgbService.qml
+singleton FanService 1.0 FanService.qml
 singleton KeyboardIndicators 1.0 KeyboardIndicators.qml
 singleton LyricsService 1.0 LyricsService.qml
 singleton MaterialThemeLoader 1.0 MaterialThemeLoader.qml
