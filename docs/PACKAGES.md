@@ -172,13 +172,18 @@ Fonts, theming, and utilities.
 | `translate-shell` | Translation CLI |
 | `kvantum` | Qt theming |
 
+### Official packages recently promoted from AUR
+
+`ttf-material-symbols-variable`, `ttf-jetbrains-mono-nerd`, `adw-gtk-theme`,
+`capitaine-cursors`, `mission-center`, and `uv` are installed from Arch `extra`.
+Keeping them on the mirror path avoids unnecessary AUR builds and is friendlier
+to users whose networks cannot reliably reach GitHub/AUR endpoints.
+
 ### From AUR
 
 | Package | Purpose | Required |
 |---------|---------|----------|
 | `darkly-bin` | Darkly Qt style (Material You widget style for Qt apps) | Yes |
-| `ttf-jetbrains-mono-nerd` | JetBrains Mono Nerd | Yes (monospace and glyphs) |
-| `ttf-material-symbols-variable-git` | Material Symbols | Yes (UI icons) |
 | `ttf-roboto-flex` | Roboto Flex variable font | Yes (default UI font) |
 | `ttf-oxanium` | Oxanium font | Yes (ZZZ and Angel styles) |
 | `ttf-gabarito-git` | Gabarito variable font | Yes (default title font) |
@@ -186,9 +191,6 @@ Fonts, theming, and utilities.
 | `ttf-rubik-vf` | Rubik variable font | No (has fallback) |
 | `otf-space-grotesk` | Space Grotesk font | No (has fallback) |
 | `ttf-twemoji` | Twitter emoji | No (has fallback) |
-| `adw-gtk-theme-git` | Adwaita GTK theme | Yes |
-| `capitaine-cursors` | Capitaine cursor theme | Yes |
-| `xwayland-satellite` | Xwayland helper for legacy apps | Yes |
 
 > **Note:** Optional fonts will be downloaded directly from GitHub if AUR packages are unavailable (e.g., due to regional restrictions). The UI will use system fallback fonts if installation fails completely.
 

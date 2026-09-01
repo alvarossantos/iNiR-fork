@@ -23,6 +23,48 @@ fi
 FEDORA_VERSION=$(rpm -E %fedora)
 tui_info "Detected Fedora ${FEDORA_VERSION}"
 
+dnf_pkg_available() {
+  local pkg="$1"
+  dnf -q list --available "$pkg" &>/dev/null || dnf -q list --installed "$pkg" &>/dev/null
+}
+
+version_at_least() {
+  local have="$1"
+  local need="$2"
+  [[ -n "$have" ]] || return 1
+  [[ "$(printf '%s\n%s\n' "$need" "$have" | sort -V | head -1)" == "$need" ]]
+}
+
+fedora_quickshell_compatible() {
+  # iNiR imports Quickshell.Networking and uses 0.3-era pragmas, so Fedora's
+  # current 0.2.1 package is not sufficient even though the package name exists.
+  local version=""
+  if command -v qs &>/dev/null; then
+    version="$(qs --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+    version_at_least "$version" "0.3.0" && return 0
+  fi
+
+  version="$(dnf -q repoquery --latest-limit 1 --qf '%{version}' quickshell 2>/dev/null \
+    | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+  if [[ -z "$version" ]]; then
+    version="$(dnf -q info quickshell 2>/dev/null \
+      | awk -F: '/^Version[[:space:]]*:/ {gsub(/[[:space:]]/, "", $2); print $2; exit}' \
+      | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+  fi
+  version_at_least "$version" "0.3.0"
+}
+
+ensure_copr_support() {
+  if dnf copr --help &>/dev/null; then
+    return 0
+  fi
+  log_info "Installing Fedora COPR support for compatibility packages..."
+  sudo dnf install -y dnf-plugins-core >/dev/null 2>&1 || {
+    log_warning "COPR support is unavailable; source/direct fallbacks will be used"
+    return 1
+  }
+}
+
 #####################################################################################
 # Optional: install only a specific list of missing deps
 #####################################################################################
@@ -74,14 +116,18 @@ if [[ -n "${ONLY_MISSING_DEPS:-}" ]]; then
       *) v sudo dnf upgrade -y --refresh ;;
     esac
 
-    # quickshell and niri come from COPR on Fedora; ensure repos are enabled
-    if [[ " ${_fed_miss_pkgs[*]} " == *" quickshell " ]]; then
-      dnf copr list --enabled 2>/dev/null | grep -q "errornointernet/quickshell" || \
-        v sudo dnf copr enable -y errornointernet/quickshell
+    # Current Fedora releases ship Niri directly, and Fedora 44+ ships
+    # Quickshell too. Keep COPR only as a compatibility fallback for older
+    # releases or derivatives whose enabled repositories do not provide it.
+    if [[ " ${_fed_miss_pkgs[*]} " == *" quickshell " ]] && ! fedora_quickshell_compatible; then
+      if ! dnf copr list --enabled 2>/dev/null | grep -q "errornointernet/quickshell"; then
+        ensure_copr_support && v sudo dnf copr enable -y errornointernet/quickshell
+      fi
     fi
-    if [[ " ${_fed_miss_pkgs[*]} " == *" niri " ]]; then
-      dnf copr list --enabled 2>/dev/null | grep -q "yalter/niri" || \
-        v sudo dnf copr enable -y yalter/niri
+    if [[ " ${_fed_miss_pkgs[*]} " == *" niri " ]] && ! dnf_pkg_available niri; then
+      if ! dnf copr list --enabled 2>/dev/null | grep -q "yalter/niri"; then
+        ensure_copr_support && v sudo dnf copr enable -y yalter/niri
+      fi
     fi
 
     v sudo dnf install $_fed_installflags "${_fed_miss_pkgs[@]}"
@@ -105,38 +151,42 @@ case ${SKIP_SYSUPDATE:-false} in
 esac
 
 #####################################################################################
-# Enable required COPR repositories
+# Enable compatibility COPR repositories when official repos do not provide
+# the package. This keeps Fedora 43 / derivative support without routing modern
+# Fedora installs through third-party repositories unnecessarily.
 #####################################################################################
-tui_info "Enabling COPR repositories..."
+tui_info "Checking Fedora package sources..."
 
-# Quickshell (CRITICAL) - PRECOMPILED from errornointernet COPR (no compilation needed!)
-if ! dnf copr list --enabled 2>/dev/null | grep -q "errornointernet/quickshell"; then
-  log_info "Enabling Quickshell COPR (precompiled)..."
-  v sudo dnf copr enable -y errornointernet/quickshell || {
-    log_error "Failed to enable Quickshell COPR — install manually:"
-    log_warning "https://copr.fedorainfracloud.org/coprs/errornointernet/quickshell/"
+# Fedora 44+ has a quickshell package, but iNiR currently needs Quickshell 0.3+.
+# Prefer an official package as soon as Fedora catches up; until then use the
+# release COPR rather than silently installing an incompatible 0.2.x runtime.
+if fedora_quickshell_compatible; then
+  log_info "Compatible Quickshell available from configured Fedora repositories"
+elif ! dnf copr list --enabled 2>/dev/null | grep -q "errornointernet/quickshell"; then
+  log_info "Quickshell 0.3+ not in configured repos — enabling release COPR..."
+  ensure_copr_support && v sudo dnf copr enable -y errornointernet/quickshell || {
+    log_error "Failed to enable Quickshell COPR"
+    log_warning "Install quickshell from a compatible repository and rerun setup"
   }
 fi
 
-# Niri compositor
-if ! dnf copr list --enabled 2>/dev/null | grep -q "yalter/niri"; then
-  log_info "Enabling Niri COPR..."
-  v sudo dnf copr enable -y yalter/niri
+# Niri is official on supported Fedora releases; retain COPR for derivatives
+# or older Fedora installations whose repository set does not include it.
+if dnf_pkg_available niri; then
+  log_info "Niri available from configured Fedora repositories"
+elif ! dnf copr list --enabled 2>/dev/null | grep -q "yalter/niri"; then
+  log_info "Niri not in configured repos — enabling compatibility COPR..."
+  ensure_copr_support && v sudo dnf copr enable -y yalter/niri
 fi
 
 #####################################################################################
-# Enable RPM Fusion (for ffmpeg, etc.)
+# Enable RPM Fusion Free (for ffmpeg, etc.)
 #####################################################################################
-tui_info "Enabling RPM Fusion repositories..."
+tui_info "Checking RPM Fusion Free..."
 
 if ! rpm -q rpmfusion-free-release &>/dev/null; then
   v sudo dnf install -y \
     "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${FEDORA_VERSION}.noarch.rpm"
-fi
-
-if ! rpm -q rpmfusion-nonfree-release &>/dev/null; then
-  v sudo dnf install -y \
-    "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${FEDORA_VERSION}.noarch.rpm"
 fi
 
 #####################################################################################
@@ -146,10 +196,9 @@ tui_info "Installing packages from repositories..."
 
 # Core system packages (including Quickshell and Niri from COPR)
 FEDORA_CORE_PKGS=(
-  # Quickshell (from COPR - no compilation needed!)
+  # Niri is official. Quickshell uses the same package name from either Fedora
+  # (once it provides >=0.3) or the release COPR selected above.
   quickshell
-  
-  # Niri compositor (from COPR)
   niri
   
   # Build tools (needed for Python packages like dbus-python, pycairo, pygobject)
@@ -185,6 +234,8 @@ FEDORA_CORE_PKGS=(
   dunst
   gum
   cliphist
+  uv
+  eza
   
   # XDG Portals
   xdg-desktop-portal
@@ -324,35 +375,53 @@ FEDORA_FONT_PKGS=(
 )
 
 installflags=""
-$ask || installflags="-y --skip-unavailable"
+$ask || installflags="-y"
 
-# Install core packages
-log_info "Installing core packages (Quickshell + Niri)..."
-v sudo dnf install $installflags "${FEDORA_CORE_PKGS[@]}"
+# Build one repository transaction from the selected feature groups. Fedora's
+# package manager already resolves the dependency graph; splitting this into six
+# transactions only repeats metadata/dependency work and makes partial failures
+# harder to reason about.
+FEDORA_REPO_PKGS=("${FEDORA_CORE_PKGS[@]}" "${FEDORA_QT6_PKGS[@]}")
+${INSTALL_AUDIO:-true} && FEDORA_REPO_PKGS+=("${FEDORA_AUDIO_PKGS[@]}")
+${INSTALL_TOOLKIT:-true} && FEDORA_REPO_PKGS+=("${FEDORA_TOOLKIT_PKGS[@]}")
+${INSTALL_SCREENCAPTURE:-true} && FEDORA_REPO_PKGS+=("${FEDORA_SCREENCAPTURE_PKGS[@]}")
+${INSTALL_FONTS:-true} && FEDORA_REPO_PKGS+=("${FEDORA_FONT_PKGS[@]}")
 
-# Install Qt6 packages
-log_info "Installing Qt6 packages..."
-v sudo dnf install $installflags "${FEDORA_QT6_PKGS[@]}"
+mapfile -t FEDORA_REPO_PKGS < <(printf '%s\n' "${FEDORA_REPO_PKGS[@]}" | awk 'NF' | sort -u)
+FEDORA_INSTALLABLE_PKGS=()
+FEDORA_REPO_FALLBACK_PKGS=()
+for pkg in "${FEDORA_REPO_PKGS[@]}"; do
+  if [[ "$pkg" == "quickshell" ]] && ! fedora_quickshell_compatible; then
+    FEDORA_REPO_FALLBACK_PKGS+=("$pkg")
+    continue
+  fi
+  if dnf_pkg_available "$pkg"; then
+    FEDORA_INSTALLABLE_PKGS+=("$pkg")
+  else
+    FEDORA_REPO_FALLBACK_PKGS+=("$pkg")
+  fi
+done
 
-# Install based on flags
-if ${INSTALL_AUDIO:-true}; then
-  log_info "Installing audio packages..."
-  v sudo dnf install $installflags "${FEDORA_AUDIO_PKGS[@]}"
+if [[ ${#FEDORA_INSTALLABLE_PKGS[@]} -gt 0 ]]; then
+  log_info "Installing ${#FEDORA_INSTALLABLE_PKGS[@]} packages from Fedora/RPM Fusion repositories..."
+  if ! v sudo dnf install $installflags --allowerasing "${FEDORA_INSTALLABLE_PKGS[@]}"; then
+    log_warning "Fedora package batch failed — retrying individually"
+    for pkg in "${FEDORA_INSTALLABLE_PKGS[@]}"; do
+      sudo dnf install $installflags --allowerasing "$pkg" >/dev/null 2>&1 || \
+        FEDORA_REPO_FALLBACK_PKGS+=("$pkg")
+    done
+  fi
 fi
 
-if ${INSTALL_TOOLKIT:-true}; then
-  log_info "Installing toolkit packages..."
-  v sudo dnf install $installflags "${FEDORA_TOOLKIT_PKGS[@]}"
+if [[ ${#FEDORA_REPO_FALLBACK_PKGS[@]} -gt 0 ]]; then
+  log_warning "Not available from configured Fedora repositories: ${FEDORA_REPO_FALLBACK_PKGS[*]}"
 fi
+unset FEDORA_REPO_PKGS FEDORA_INSTALLABLE_PKGS
 
-if ${INSTALL_SCREENCAPTURE:-true}; then
-  log_info "Installing screen capture packages..."
-  v sudo dnf install $installflags "${FEDORA_SCREENCAPTURE_PKGS[@]}"
-fi
-
-if ${INSTALL_FONTS:-true}; then
-  log_info "Installing font packages..."
-  v sudo dnf install $installflags "${FEDORA_FONT_PKGS[@]}"
+if ! fedora_quickshell_compatible; then
+  log_error "Quickshell 0.3+ is required by iNiR but is unavailable from the configured Fedora repositories"
+  log_warning "Fedora's current official quickshell package is 0.2.x; enable a compatible Quickshell repository and rerun setup"
+  return 1
 fi
 
 #####################################################################################
@@ -423,6 +492,56 @@ install_github_binary() {
   rm -rf "$temp_dir"
 }
 
+# Fedora 43 did not ship cliphist, while newer releases do. Keep the existing
+# upstream static-binary route only as a fallback after the configured mirrors
+# have been tried, so Fedora 44+ never need GitHub for this dependency.
+if ! command -v cliphist &>/dev/null; then
+  install_github_binary "cliphist" "sentriz/cliphist" "linux-${ARCH_SUFFIX}$" || \
+    log_warning "cliphist is still missing — clipboard history will not work until it is installed"
+fi
+
+# hyprpicker was retired from current Fedora releases, but its build-time
+# libraries (hyprutils + hyprwayland-scanner) are official packages. Compile
+# only the tiny picker itself when the user's configured repos do not carry it;
+# this avoids enabling a broad Hyprland COPR that could replace unrelated
+# system packages.
+if ${INSTALL_TOOLKIT:-true} && ! command -v hyprpicker &>/dev/null; then
+  tui_info "Installing hyprpicker fallback..."
+  HYPRPICKER_BUILD_DEPS=(
+    cmake
+    gcc-c++
+    ninja-build
+    cairo-devel
+    libjpeg-turbo-devel
+    pango-devel
+    wayland-devel
+    wayland-protocols-devel
+    libxkbcommon-devel
+    hyprutils-devel
+    hyprwayland-scanner-devel
+  )
+  if sudo dnf install -y "${HYPRPICKER_BUILD_DEPS[@]}" >/dev/null 2>&1; then
+    HYPRPICKER_BUILD_DIR="/tmp/hyprpicker-build-$$"
+    if git clone --depth 1 --branch v0.4.7 https://github.com/hyprwm/hyprpicker.git "$HYPRPICKER_BUILD_DIR" 2>/dev/null; then
+      if cmake -S "$HYPRPICKER_BUILD_DIR" -B "$HYPRPICKER_BUILD_DIR/build" \
+          -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr \
+          >/dev/null 2>&1 \
+          && cmake --build "$HYPRPICKER_BUILD_DIR/build" >/dev/null 2>&1 \
+          && sudo cmake --install "$HYPRPICKER_BUILD_DIR/build" >/dev/null 2>&1; then
+        log_success "hyprpicker installed from upstream source"
+      else
+        log_warning "hyprpicker source build failed"
+      fi
+    else
+      log_warning "Could not reach hyprpicker upstream; install the Fedora-compatible package manually"
+    fi
+    rm -rf "$HYPRPICKER_BUILD_DIR"
+  else
+    log_warning "Could not install hyprpicker build dependencies"
+  fi
+  unset HYPRPICKER_BUILD_DEPS HYPRPICKER_BUILD_DIR
+fi
+
 # awww - wallpaper daemon (Wayland) — compile from source
 if ! command -v awww &>/dev/null; then
   log_info "Installing awww (wallpaper daemon)..."
@@ -461,17 +580,15 @@ if ${INSTALL_FONTS:-true}; then
 fi
 
 #####################################################################################
-# Install uv (Python package manager)
+# uv fallback for Fedora derivatives that do not carry the package
 #####################################################################################
-tui_info "Installing uv (Python package manager)..."
 if ! command -v uv &>/dev/null; then
-  # Try the official installer first (fastest)
+  tui_info "Installing uv fallback..."
   curl -LsSf https://astral.sh/uv/install.sh | sh 2>/dev/null || {
-    # Fallback to cargo
     if command -v cargo &>/dev/null; then
       cargo install uv
     else
-      log_warning "Could not install uv. Install manually: https://github.com/astral-sh/uv"
+      log_warning "Could not install uv"
     fi
   }
 fi
@@ -668,7 +785,8 @@ if ! command -v starship &>/dev/null; then
     log_warning "Could not install Starship"
 fi
 
-# Eza (modern ls replacement)
+# Eza is in Fedora repositories; keep the release binary as a derivative/
+# restricted-repository fallback only.
 if ! command -v eza &>/dev/null; then
   log_info "Installing Eza..."
   mkdir -p ~/.local/bin
@@ -721,12 +839,6 @@ setup-foot-config
 setup-fish-config
 
 #####################################################################################
-# Python environment setup
-#####################################################################################
-showfun install-python-packages
-v install-python-packages
-
-#####################################################################################
 # Post-install summary
 #####################################################################################
 echo ""
@@ -734,15 +846,15 @@ log_success "══════════════════════�
 log_success "  Fedora dependencies installed!"
 log_success "════════════════════════════════════════════════════════════════"
 echo ""
-log_info "Installed from COPR (no compilation):"
-echo "  - quickshell (errornointernet/quickshell)"
-echo "  - niri (yalter/niri)"
+log_info "Fedora package sources:"
+echo "  - niri: Fedora repositories (COPR fallback when unavailable)"
+echo "  - quickshell: compatible Fedora package when >=0.3, otherwise release COPR"
 echo ""
 log_info "Installed from repos:"
-echo "  - gum, cliphist, xwayland-satellite, hyprpicker, swappy"
+echo "  - gum, cliphist (Fedora 44+), xwayland-satellite, swappy, uv, eza"
 echo ""
-log_info "Installed from GitHub releases:"
-echo "  - darkly, starship, eza"
+log_info "Fallback sources when Fedora lacks a package:"
+echo "  - cliphist/static release, hyprpicker/source, darkly RPM, starship installer"
 echo ""
 log_info "Themes configured:"
 echo "  - GTK: adw-gtk3-dark"

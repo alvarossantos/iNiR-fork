@@ -164,13 +164,44 @@ if 'spawn "inir" "altSwitcher"' in binds:
 PY
 
 arch_installer="$runtime_root/sdata/dist-arch/install-deps.sh"
-if ! grep -Fq 'pacman -T "${depends[@]}"' "$arch_installer" \
-        || ! grep -Fq 'pacman -S $installflags "${missing_deps[@]}"' "$arch_installer"; then
-    printf 'FAIL: Arch PKGBUILD dependencies are not filtered through the local package database\n' >&2
+if ! grep -Fq 'pacman -T "${_all_official[@]}"' "$arch_installer" \
+        || ! grep -Fq 'pacman -S $installflags "${_repo_installable[@]}"' "$arch_installer"; then
+    printf 'FAIL: Arch package plan is not filtered through the local package database before the batched install\n' >&2
     exit 1
 fi
-if grep -Fq 'pacman -S $installflags "${depends[@]}"' "$arch_installer"; then
-    printf 'FAIL: Arch installer can still reinstall or downgrade satisfied PKGBUILD dependencies\n' >&2
+if grep -Fq 'pacman -S $installflags "${_all_official[@]}"' "$arch_installer"; then
+    printf 'FAIL: Arch installer can still reinstall or downgrade satisfied dependencies\n' >&2
+    exit 1
+fi
+
+fedora_installer="$runtime_root/sdata/dist-fedora/install-deps.sh"
+if ! grep -Fq 'fedora_quickshell_compatible' "$fedora_installer" \
+        || ! grep -Fq 'FEDORA_REPO_PKGS=' "$fedora_installer"; then
+    printf 'FAIL: Fedora installer lost repository-first/version-aware package planning\n' >&2
+    exit 1
+fi
+if grep -Fq 'rpmfusion-nonfree-release' "$fedora_installer"; then
+    printf 'FAIL: Fedora installer enables RPM Fusion Nonfree without an iNiR dependency requiring it\n' >&2
+    exit 1
+fi
+
+debian_installer="$runtime_root/sdata/dist-debian/install-deps.sh"
+if ! grep -Fq 'ensure_debian_backports' "$debian_installer" \
+        || ! grep -Fq 'ensure_debian_component "contrib"' "$debian_installer" \
+        || ! grep -Fq 'polkit-kde-agent-1' "$debian_installer"; then
+    printf 'FAIL: Debian installer lost backports/contrib/Trixie compatibility handling\n' >&2
+    exit 1
+fi
+if grep -Fq 'tui_info "Setting up Rust toolchain..."' "$debian_installer"; then
+    printf 'FAIL: Debian installer installs Rust unconditionally instead of only for source fallbacks\n' >&2
+    exit 1
+fi
+
+python_setup_owners=$(grep -l 'v install-python-packages' \
+    "$runtime_root"/sdata/dist-*/install-deps.sh \
+    "$runtime_root/sdata/subcmd-install/3.files.sh" 2>/dev/null || true)
+if [[ "$python_setup_owners" != "$runtime_root/sdata/subcmd-install/3.files.sh" ]]; then
+    printf 'FAIL: Python environment setup has more than one install owner:\n%s\n' "$python_setup_owners" >&2
     exit 1
 fi
 

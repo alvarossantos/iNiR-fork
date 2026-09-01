@@ -599,7 +599,7 @@ check_fonts() {
         for font in "${missing_critical[@]}" "${missing_important[@]}"; do
             case "$font" in
                 "Material Symbols Rounded")
-                    _try_install_font_package "ttf-material-symbols-variable-git" "Material Symbols Rounded" && ((fixed++)) || true ;;
+                    _try_install_font_package "ttf-material-symbols-variable" "Material Symbols Rounded" && ((fixed++)) || true ;;
                 "JetBrainsMono Nerd Font")
                     _try_install_font_package "ttf-jetbrains-mono-nerd" "JetBrainsMono Nerd Font" && ((fixed++)) || true ;;
                 "Roboto Flex")

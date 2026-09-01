@@ -223,7 +223,7 @@ sudo make install       # system-wide instead of your home
 ./setup rollback        # undo the last update
 ```
 
-**Distros:** Arch gets the automated installer. Everything else installs by hand, the [package list](https://github.com/snowarch/inir/wiki/PACKAGES) tells you what you need.
+**Distros:** Arch is the primary target. Fedora and Debian/Ubuntu also have automated dependency paths with distro-repository-first fallbacks; other distributions use the generic guidance in the [package list](https://github.com/snowarch/inir/wiki/PACKAGES).
 
 ---
 
