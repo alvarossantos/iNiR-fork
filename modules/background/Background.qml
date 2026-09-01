@@ -1336,11 +1336,14 @@ Scope {
                             : bgRoot.fillMode === "center" ? Image.Pad
                             : Image.PreserveAspectCrop
                     sourceSize {
-                        // Decode at screen resolution × monitor DPI scale. Do NOT multiply by
-                        // parallax effectiveWallpaperScale — that causes CPU upscaling which
-                        // produces pixelation. GPU scaling handles the parallax zoom cleanly.
-                        width: Math.max(1, Math.round(bgRoot.screen.width * (bgRoot.monitor?.scale ?? 1)))
-                        height: Math.max(1, Math.round(bgRoot.screen.height * (bgRoot.monitor?.scale ?? 1)))
+                        // Keep the decoded texture stable at output resolution. In
+                        // particular, do not shrink this after `magick identify`
+                        // discovers a low-resolution source: doing so makes Qt
+                        // re-decode the incoming wallpaper mid-transition and then
+                        // leaves the GPU enlarging a smaller texture. That produces
+                        // the visible flash/softening on carousel changes.
+                        width: Math.max(1, Math.ceil(bgRoot.screen.width * Math.max(1, bgRoot.devicePixelRatio ?? 1)))
+                        height: Math.max(1, Math.ceil(bgRoot.screen.height * Math.max(1, bgRoot.devicePixelRatio ?? 1)))
                     }
 
                     onTransitionStarted: {

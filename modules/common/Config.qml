@@ -1899,7 +1899,7 @@ Singleton {
                 property JsonObject backdrop: JsonObject {
                     property bool enable: true
                     property bool hideWallpaper: false
-                    property string fillMode: "fill" // "fill", "fit"
+                    property string fillMode: "fill" // legacy persisted key; backdrop rendering always covers the output
                     property bool useMainWallpaper: true
                     property string wallpaperPath: ""
                     property string thumbnailPath: "" // Thumbnail for animated wallpapers (video/gif)
