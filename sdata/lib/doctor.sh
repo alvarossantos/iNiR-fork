@@ -127,6 +127,41 @@ check_dependencies() {
             missing_cmds+=("$cmd")
         fi
     done
+
+    # Tesseract itself can be installed while the language data iNiR exposes in
+    # Settings is absent. Treat those models as first-class dependencies so an
+    # existing install can be repaired instead of failing every OCR attempt.
+    local tesseract_langs=""
+    if command -v tesseract &>/dev/null; then
+        tesseract_langs="$(tesseract --list-langs 2>/dev/null | tail -n +2)"
+        local inir_tessdata="${XDG_DATA_HOME:-$HOME/.local/share}/inir/tessdata"
+        if [[ -d "$inir_tessdata" ]]; then
+            local cached_model
+            for cached_model in "$inir_tessdata"/*.traineddata; do
+                [[ -e "$cached_model" ]] || continue
+                tesseract_langs+=$'\n'"$(basename "$cached_model" .traineddata)"
+            done
+        fi
+    fi
+    local ocr_models=(
+        "eng:ocr-eng:OCR English data"
+        "spa:ocr-spa:OCR Spanish data"
+        "rus:ocr-rus:OCR Russian data"
+        "jpn:ocr-jpn:OCR Japanese data"
+        "jpn_vert:ocr-jpn-vert:OCR Japanese vertical data"
+        "chi_sim:ocr-chi-sim:OCR Simplified Chinese data"
+        "chi_sim_vert:ocr-chi-sim-vert:OCR Simplified Chinese vertical data"
+        "chi_tra:ocr-chi-tra:OCR Traditional Chinese data"
+        "chi_tra_vert:ocr-chi-tra-vert:OCR Traditional Chinese vertical data"
+    )
+    local ocr_spec ocr_lang ocr_id ocr_name
+    for ocr_spec in "${ocr_models[@]}"; do
+        IFS=: read -r ocr_lang ocr_id ocr_name <<<"$ocr_spec"
+        if ! grep -Fxq "$ocr_lang" <<<"$tesseract_langs"; then
+            missing+=("$ocr_name")
+            missing_cmds+=("$ocr_id")
+        fi
+    done
     
     if [[ ${#missing[@]} -eq 0 ]]; then
         doctor_missing_deps=()

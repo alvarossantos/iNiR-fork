@@ -104,6 +104,14 @@ Singleton {
     }
 
     property bool regionSelectorOpen: false
+    property bool japaneseLookupOpen: false
+    property bool japaneseLookupExpanded: false
+    property var japaneseLookupResult: ({})
+    property string japaneseLookupScreen: ""
+    property real japaneseLookupX: 0
+    property real japaneseLookupY: 0
+    property real japaneseLookupWidth: 0
+    property real japaneseLookupHeight: 0
     property var regionSelectorAction: 0
     property var regionSelectorMode: 0
     // Explicit screenshot callers must remain deterministic. The dedicated

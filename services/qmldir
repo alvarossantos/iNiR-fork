@@ -34,6 +34,7 @@ singleton TouchpadService 1.0 TouchpadService.qml
 singleton RgbService 1.0 RgbService.qml
 singleton FanService 1.0 FanService.qml
 singleton KeyboardIndicators 1.0 KeyboardIndicators.qml
+singleton JapaneseDictionary 1.0 JapaneseDictionary.qml
 singleton LyricsService 1.0 LyricsService.qml
 singleton MaterialThemeLoader 1.0 MaterialThemeLoader.qml
 singleton MemoryPressureService 1.0 MemoryPressureService.qml

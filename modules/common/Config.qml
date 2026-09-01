@@ -2841,6 +2841,18 @@ Singleton {
                 // Tesseract language expression. "auto" follows the session locale;
                 // explicit values may combine installed models with +.
                 property string ocrLanguage: "auto"
+                property JsonObject japaneseLookup: JsonObject {
+                    property bool enabled: true
+                    property string translationTarget: "auto" // auto follows UI/system locale; common targets: en, es
+                    property JsonObject anki: JsonObject {
+                        property bool enabled: false
+                        property string endpoint: "http://127.0.0.1:8765"
+                        property string deck: "Default"
+                        property string model: "Basic"
+                        property string frontField: "Front"
+                        property string backField: "Back"
+                    }
+                }
                 property int lastAction: 0 // SnipAction ordinal: 0 Shot, 1 Edit, 2 Search, 3 OCR (Record never persists)
                 property int lastMode: 0 // SelectionMode ordinal: 0 rectangle, 1 circle
                 property JsonObject targetRegions: JsonObject {

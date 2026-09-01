@@ -8,20 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Local Japanese dictionary backend**: iNiR can import Yomitan v3 dictionary ZIPs into a local SQLite index and query exact terms, longest OCR-text prefixes, term metadata such as pitch/frequency, and kanji information. This is the offline data layer for the planned contextual Japanese OCR lookup surface; no incomplete popup is exposed yet.
+
+- **Japanese OCR study assistant**: Japanese region OCR can open a compact dictionary card beside the captured text and expand into a study view with the full OCR result, readings, romaji, readable definitions, deinflection, pitch/kanji data, on-demand translation, copy actions and optional Anki export. Jitendex installs and indexes in one click, then dictionary lookup works offline.
+- **Multilingual OCR onboarding**: OCR exposes English, Spanish, Russian, Japanese and Simplified/Traditional Chinese presets, including vertical Japanese/Chinese modes. Missing Tesseract language data can self-provision in the user data directory without requiring a manual sudo/package step.
+- **Japanese study resources**: Settings can download current Kaishi, Manabi and Niponismo Anki decks directly from their upstream releases, while advanced users can still import additional Yomitan dictionaries manually.
 
 ### Changed
-- **Expandable calendar/task surfaces**: Dashboard Calendar, Agenda, and To Do cards plus the normal right-sidebar organizer tabs now expose a consistent full-detail layer with proper back/Escape behavior; the compact sidebar's truncated Upcoming block has an explicit route to its full Events section.
-- **Multilingual OCR**: region OCR now selects a configured Tesseract model instead of combining every installed language, follows the session locale in Auto mode, and ships repository-backed English, Spanish, Russian, Japanese, Simplified Chinese, and Traditional Chinese data (including vertical Japanese/Chinese models) across Arch, Fedora, and Debian/Ubuntu install paths.
-- **Arch install fast path**: packages now available in Arch `extra` (Mission Center, Material Symbols, JetBrains Mono Nerd, adw-gtk-theme, Capitaine cursors, and uv) stay on the signed mirror path instead of being routed through AUR; remaining AUR fonts are attempted as one batch with the existing per-package/direct-download recovery kept for restricted networks.
-- **Fedora/Debian repository-first setup**: Fedora now prefers current distro packages for Niri, uv, eza, cliphist and related tooling, uses the Quickshell release COPR only while Fedora's own package remains below iNiR's 0.3 runtime requirement, batches repository installs, and no longer enables RPM Fusion Nonfree unnecessarily. Debian 13 can reuse the user's own mirror for `contrib` and `trixie-backports`, gaining prebuilt Quickshell/Hyprpicker plus stable Starship/eza while preserving source/download fallbacks; Trixie's current Polkit package split is handled explicitly.
+
+- **OCR workflow and Settings**: text recognition now uses one configured language instead of combining every installed model, adapts Tesseract page segmentation and preprocessing to the selected region, remembers the Super+Shift+S snip action, and presents OCR/Japanese/translation/Anki setup as separate Material-oriented steps with technical options kept under Advanced.
+- **Calendar/task detail views**: Dashboard Calendar, Agenda and To Do retain their full-detail views; the right sidebar now exposes Calendar/Events/To Do expansion from each widget's own header instead of placing a changing control in the navigation rail.
+- **Cross-distro setup**: Fedora and Debian/Ubuntu prefer current distro packages and distro-native repair paths, with targeted source/Flatpak/COPR fallbacks only where required; Arch dependency tracking and repository-first installation paths were refreshed accordingly.
 
 ### Fixed
-- **Fedora Doctor dependency repair**: missing-command recovery now maps Fedora command IDs to real RPM names, scopes Arch-only `checkupdates` correctly, and uses dedicated providers for awww, Gowall, Mission Center, and SongRec instead of passing Arch names/Flatpak IDs directly to DNF; fresh Fedora installs now include the `qalc` and NetworkManager editor runtime packages as well.
-- **Duplicate Python environment setup**: fresh installs no longer resolve and sync the same uv environment once in the distro dependency phase and again after the runtime files are installed; the files phase remains the single owner.
-- **Arch dependency tracker drift**: `inir-deps` now retains every official package declared by the normal dependency bundles, including OCR language data, awww, Cava/EasyEffects, input helpers, translation/color tools and the packages promoted from AUR, so orphan cleanup cannot quietly remove pieces of a full iNiR install.
-- **InnerTube on Debian stable**: YouTube Music browsing now prefers distro-provided `ytmusicapi` on Arch/Fedora/Ubuntu but can run through iNiR's managed Python environment when Debian stable lacks the package, avoiding a permanently broken InnerTune surface without forcing PyPI on distros that already provide signed packages.
-- **Mascot sprites on NixOS**: `packages.<system>.inir-with-mascot` now provides a ready-to-use iNiR package with the optional mascot art pack, without requiring users to assemble a `symlinkJoin` themselves.
+
+- **Japanese OCR matching and presentation**: Jitendex structured entries are rendered as human-readable senses, OCR-inserted spaces between Japanese glyphs are normalized, written forms/readings and common inflections are resolved, and useful multi-character terms are preferred over accidental one-kana matches. The popup now stays within screen bounds and keeps its footer/actions visible.
+- **Anki integration states**: iNiR distinguishes Anki missing, closed, AnkiConnect unavailable and connected states before enabling card export, and keeps endpoint/model/field configuration out of the normal path.
+- **Clipboard ownership**: Dock/Task View preview captures no longer replace the user's clipboard, and screenshot/OCR clipboard owners run outside `inir.service` so shell restarts do not leave `wl-copy` processes behind.
+- **OCR repair and diagnostics**: Doctor checks required language models in addition to the Tesseract executable and routes repairs to the correct Arch, Fedora and Debian package names; OCR errors now report the actual missing-model/provisioning failure.
+- **Fedora/Debian dependency repair**: Doctor no longer treats missing command IDs, Arch package names or Flatpak IDs as native DNF/APT package names; awww, Gowall, Mission Center, SongRec, NetworkManager editor and related providers follow distro-appropriate install paths.
+- **Runtime polish**: expired notification image handles fall back to stable app icons, duplicate Python environment setup was removed, Arch's dependency tracker covers the normal feature bundles, and InnerTube can use iNiR's managed Python environment on Debian stable when `ytmusicapi` is unavailable as a distro package.
 
 ## [2.29.3] - 2026-08-25
 

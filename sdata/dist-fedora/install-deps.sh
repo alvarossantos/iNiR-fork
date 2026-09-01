@@ -168,6 +168,11 @@ if [[ -n "${ONLY_MISSING_DEPS:-}" ]]; then
     [ddcutil]="ddcutil" [nm-connection-editor]="nm-connection-editor"
     [xdg-settings]="xdg-utils" [mpv]="mpv" [swaylock]="swaylock"
     [swayidle]="swayidle" [trans]="translate-shell"
+    [ocr-eng]="tesseract-langpack-eng" [ocr-spa]="tesseract-langpack-spa"
+    [ocr-rus]="tesseract-langpack-rus" [ocr-jpn]="tesseract-langpack-jpn"
+    [ocr-jpn-vert]="tesseract-langpack-jpn_vert"
+    [ocr-chi-sim]="tesseract-langpack-chi_sim" [ocr-chi-sim-vert]="tesseract-langpack-chi_sim_vert"
+    [ocr-chi-tra]="tesseract-langpack-chi_tra" [ocr-chi-tra-vert]="tesseract-langpack-chi_tra_vert"
   )
 
   _fed_installflags=""

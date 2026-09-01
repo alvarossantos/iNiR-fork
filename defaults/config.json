@@ -1474,6 +1474,19 @@
     },
     "regionSelector": {
         "rememberSnipChoice": true,
+        "ocrLanguage": "auto",
+        "japaneseLookup": {
+            "enabled": true,
+            "translationTarget": "auto",
+            "anki": {
+                "enabled": false,
+                "endpoint": "http://127.0.0.1:8765",
+                "deck": "Default",
+                "model": "Basic",
+                "frontField": "Front",
+                "backField": "Back"
+            }
+        },
         "lastAction": 0,
         "lastMode": 0,
         "circle": {

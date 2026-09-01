@@ -205,6 +205,12 @@ if ! grep -Fq '[[ "${OS_GROUP_ID:-unknown}" == "arch" ]]' "$runtime_root/sdata/l
     printf 'FAIL: Doctor no longer scopes checkupdates to Arch\n' >&2
     exit 1
 fi
+if ! grep -Fq 'ocr-jpn:OCR Japanese data' "$runtime_root/sdata/lib/doctor.sh" \
+        || ! grep -Fq '[ocr-jpn]="tesseract-data-jpn"' "$arch_installer" \
+        || ! grep -Fq '[ocr-jpn]="tesseract-langpack-jpn"' "$fedora_installer"; then
+    printf 'FAIL: Doctor/installers no longer repair missing OCR language data\n' >&2
+    exit 1
+fi
 
 debian_installer="$runtime_root/sdata/dist-debian/install-deps.sh"
 if ! grep -Fq 'ensure_debian_backports' "$debian_installer" \
@@ -217,6 +223,32 @@ if grep -Fq 'tui_info "Setting up Rust toolchain..."' "$debian_installer"; then
     printf 'FAIL: Debian installer installs Rust unconditionally instead of only for source fallbacks\n' >&2
     exit 1
 fi
+if ! grep -Fq '[ocr-jpn]="tesseract-ocr-jpn"' "$debian_installer"; then
+    printf 'FAIL: Debian Doctor repair lost Japanese OCR language mapping\n' >&2
+    exit 1
+fi
+
+# Super+Shift+S is the remembered unified snip entry point; Print remains direct.
+if ! grep -Fq 'Mod+Shift+S { spawn "inir" "region" "menu"; }' "$runtime_root/defaults/niri/config.d/70-binds.kdl" \
+        || [[ ! -x "$runtime_root/sdata/migrations/037-remembered-super-shift-s.sh" ]]; then
+    printf 'FAIL: remembered Super+Shift+S snip flow is incomplete\n' >&2
+    exit 1
+fi
+if grep -Fq '${cmd_to_pkg[$cmd]:-$cmd}' "$debian_installer"; then
+    printf 'FAIL: Debian Doctor repair can still pass unknown command IDs directly to apt\n' >&2
+    exit 1
+fi
+for required in \
+    '[qalc]="qalc"' \
+    '[nm-connection-editor]="network-manager-gnome"' \
+    'io.missioncenter.MissionCenter' \
+    'golang-go' \
+    'cargo install --root "$SONGREC_ROOT" songrec'; do
+    if ! grep -Fq "$required" "$debian_installer"; then
+        printf 'FAIL: Debian dependency repair/provider route missing: %s\n' "$required" >&2
+        exit 1
+    fi
+done
 
 ocr_runner="$runtime_root/scripts/ocr-runner.sh"
 region_selector="$runtime_root/modules/regionSelector/RegionSelection.qml"
@@ -230,6 +262,72 @@ if grep -Fq 'tesseract --list-langs |' "$region_selector"; then
     printf 'FAIL: region OCR still combines every installed Tesseract language\n' >&2
     exit 1
 fi
+if ! grep -Fq 'tessdata_fast/main/$lang.traineddata' "$ocr_runner" \
+        || ! grep -Fq 'cdn.jsdelivr.net/gh/tesseract-ocr/tessdata_fast' "$ocr_runner" \
+        || ! grep -Fq 'INIR_TESSDATA_DIR' "$ocr_runner"; then
+    printf 'FAIL: OCR runtime lost user-space language provisioning fallback\n' >&2
+    exit 1
+fi
+if grep -F 'japaneseOcrProc.command' "$region_selector" | grep -Fq 'wl-copy'; then
+    printf 'FAIL: Japanese OCR stdout is still consumed by clipboard plumbing before lookup\n' >&2
+    exit 1
+fi
+clipboard_helper="$runtime_root/scripts/clipboard-copy.sh"
+if [[ ! -x "$clipboard_helper" ]] \
+        || ! grep -Fq 'systemd-run --user' "$clipboard_helper" \
+        || grep -R -Fq '/usr/bin/wl-copy' "$runtime_root/modules/regionSelector" \
+        || grep -R -Fq 'execDetached(["wl-copy"' "$runtime_root/modules/japaneseLookup"; then
+    printf 'FAIL: snipping clipboard ownership can leak wl-copy into inir.service\n' >&2
+    exit 1
+fi
+if grep -A30 -F 'Enable AnkiConnect button' "$runtime_root/modules/settings/ToolsConfig.qml" | grep -Fq 'GridLayout {'; then
+    printf 'FAIL: Anki settings reintroduced the MaterialTextField/GridLayout implicitWidth binding loop\n' >&2
+    exit 1
+fi
+if ! grep -Fq 'anki-status' "$runtime_root/services/JapaneseDictionary.qml" \
+        || ! grep -Fq 'Anki Desktop not detected' "$runtime_root/services/JapaneseDictionary.qml" \
+        || ! grep -Fq 'Open Anki' "$runtime_root/modules/japaneseLookup/JapaneseLookup.qml" \
+        || ! grep -Fq 'cardContent.implicitHeight + 28' "$runtime_root/modules/japaneseLookup/JapaneseLookup.qml"; then
+    printf 'FAIL: Japanese lookup Anki health/footer sizing regression\n' >&2
+    exit 1
+fi
+if ! grep -Fq 'showAdvancedOcr' "$runtime_root/modules/settings/ToolsConfig.qml" \
+        || ! grep -Fq 'showAdvancedAnki' "$runtime_root/modules/settings/ToolsConfig.qml" \
+        || ! grep -Fq 'Japanese study assistant' "$runtime_root/modules/settings/ToolsConfig.qml"; then
+    printf 'FAIL: OCR/Japanese Settings onboarding regressed into technical-first controls\n' >&2
+    exit 1
+fi
+sidebar_group="$runtime_root/modules/sidebarRight/BottomWidgetGroup.qml"
+if grep -A90 -F '// Navigation rail' "$sidebar_group" | grep -Fq 'open_in_full' \
+        || ! grep -Fq 'onRequestExpand: root.requestExpand("calendar")' "$sidebar_group" \
+        || ! grep -Fq 'onRequestExpand: root.requestExpand("events")' "$sidebar_group" \
+        || ! grep -Fq 'onRequestExpand: root.requestExpand("todo")' "$sidebar_group"; then
+    printf 'FAIL: right-sidebar organizer expansion leaked back into the navigation rail\n' >&2
+    exit 1
+fi
+for widget in calendar/CalendarWidget.qml events/EventsWidget.qml todo/TodoWidget.qml; do
+    grep -Fq 'signal requestExpand()' "$runtime_root/modules/sidebarRight/$widget" || {
+        printf 'FAIL: right-sidebar organizer widget lacks contextual expand action: %s\n' "$widget" >&2
+        exit 1
+    }
+done
+
+if ! grep -Fq 'japaneseLookupExpanded' "$runtime_root/modules/japaneseLookup/JapaneseLookup.qml" \
+        || ! grep -Fq 'translateCurrent' "$runtime_root/modules/japaneseLookup/JapaneseLookup.qml" \
+        || [[ ! -x "$runtime_root/scripts/translate-ocr.sh" ]] \
+        || [[ ! -x "$runtime_root/scripts/study-decks.py" ]]; then
+    printf 'FAIL: expandable Japanese lookup translation/study tools are incomplete\n' >&2
+    exit 1
+fi
+if ! grep -Fq -- '--psm "$psm"' "$ocr_runner" \
+        || ! grep -Fq 'resize 200%' "$ocr_runner"; then
+    printf 'FAIL: OCR selection-aware segmentation/preprocessing regressed\n' >&2
+    exit 1
+fi
+python3 "$runtime_root/scripts/study-decks.py" list | grep -Fq '"kaishi"' || {
+    printf 'FAIL: study deck catalog is unavailable\n' >&2
+    exit 1
+}
 for pkg in tesseract-data-rus tesseract-data-jpn tesseract-data-jpn_vert tesseract-data-chi_sim tesseract-data-chi_tra; do
     grep -Fq "$pkg" "$runtime_root/sdata/dist-arch/inir-screencapture/PKGBUILD" || {
         printf 'FAIL: Arch screencapture bundle is missing OCR language package %s\n' "$pkg" >&2
@@ -254,6 +352,20 @@ if [[ ! -x "$jp_dictionary" ]]; then
     printf 'FAIL: Japanese dictionary backend is missing or not executable\n' >&2
     exit 1
 fi
+if ! grep -Fq 'singleton JapaneseDictionary 1.0 JapaneseDictionary.qml' "$runtime_root/services/qmldir" \
+        || ! grep -Fq 'modules/japaneseLookup/JapaneseLookup.qml' "$runtime_root/shell.qml" \
+        || ! grep -Fq 'JapaneseDictionary.lookupText' "$runtime_root/modules/regionSelector/RegionSelection.qml" \
+        || ! grep -Fq 'Install Japanese dictionary (~37 MB)' "$runtime_root/modules/settings/ToolsConfig.qml"; then
+    printf 'FAIL: Japanese OCR dictionary UI/runtime wiring is incomplete\n' >&2
+    exit 1
+fi
+jp_installer="$runtime_root/scripts/install-japanese-dictionary.sh"
+if [[ ! -x "$jp_installer" ]] \
+        || ! grep -Fq 'releases/latest/download/jitendex-yomitan.zip' "$jp_installer" \
+        || ! grep -Fq 'JapaneseDictionary.installRecommended()' "$runtime_root/modules/japaneseLookup/JapaneseLookup.qml"; then
+    printf 'FAIL: one-click Jitendex onboarding is incomplete\n' >&2
+    exit 1
+fi
 python3 - "$jp_dictionary" <<'PYTEST'
 import json, subprocess, sys, tempfile, zipfile
 from pathlib import Path
@@ -265,16 +377,38 @@ with tempfile.TemporaryDirectory() as td:
     db = root / "dictionary.sqlite3"
     with zipfile.ZipFile(archive, "w") as z:
         z.writestr("index.json", json.dumps({"title": "iNiR Test", "revision": "1", "format": 3}))
-        z.writestr("term_bank_1.json", json.dumps([["食べる", "たべる", "v1", "v1", 10, ["to eat"], 1, "common"]], ensure_ascii=False))
+        z.writestr("term_bank_1.json", json.dumps([
+            ["食べる", "たべる", "v1", "v1", 10, ["to eat"], 1, "common"],
+            ["高い", "たかい", "adj-i", "adj-i", 8, [{"type":"structured-content","content":{"tag":"ul","data":{"content":"glossary"},"content":{"tag":"li","content":"high; expensive"}}}], 2, "common"],
+            ["またね", "またね", "", "", 200, ["bye; see you later"], 3, "common"],
+            ["ま", "ま", "", "", 97, ["just; now"], 4, ""],
+            ["幾ら", "いくら", "", "", 200, ["how much"], 5, "common"],
+            ["いくら", "いくら", "", "", 99, ["salted salmon roe"], 6, ""],
+            ["何処", "どこ", "", "", 200, ["where"], 7, "common"]
+        ], ensure_ascii=False))
         z.writestr("term_meta_bank_1.json", json.dumps([["食べる", "pitch", {"reading": "たべる", "pitches": [{"position": 2}]}]], ensure_ascii=False))
         z.writestr("kanji_bank_1.json", json.dumps([["食", "ショク", "た.べる", "", ["eat"], {}]], ensure_ascii=False))
     def run(*args):
         proc = subprocess.run([sys.executable, str(script), "--db", str(db), *args], check=True, text=True, capture_output=True)
         return json.loads(proc.stdout)
-    assert run("import", str(archive))["terms"] == 1
+    assert run("import", str(archive))["terms"] == 7
     scanned = run("scan", "食べる猫")
     assert scanned["matched"] == "食べる"
     assert scanned["metadata"]["pitch"][0]["data"]["pitches"][0]["position"] == 2
+    polite = run("scan-smart", "食べました")
+    assert polite["matched"] == "食べる" and polite["surface"] == "食べました"
+    assert polite["reading"] == "たべる" and polite["romaji"] == "taberu"
+    adjective = run("scan-smart", "高かった")
+    assert adjective["matched"] == "高い"
+    assert adjective["terms"][0]["displayDefinitions"] == ["high; expensive"]
+    phrase = run("scan-smart", "• またね (Mata ne) — See you later")
+    assert phrase["surface"] == "またね" and phrase["terms"][0]["displayDefinitions"][0].startswith("bye")
+    spaced_phrase = run("scan-smart", "• ま た ね (Mata ne) — See you later")
+    assert spaced_phrase["surface"] == "またね"
+    price = run("scan-smart", "いくらですか (Ikura desu ka)")
+    assert price["surface"] == "いくら" and price["terms"][0]["expression"] == "幾ら"
+    where = run("scan-smart", "どこですか")
+    assert where["surface"] == "どこ" and where["terms"][0]["expression"] == "何処"
     assert run("kanji", "食")["kanji"][0]["meanings"] == ["eat"]
 PYTEST
 
@@ -407,8 +541,19 @@ if ! grep -Fq 'retainWhileLoading: true' "$orbit_stage" \
     printf 'FAIL: Orbit preview decoding can reload during animated geometry changes\n' >&2
     exit 1
 fi
+pill_notifs="$runtime_root/modules/pill/PillNotifs.qml"
+if ! grep -Fq 'image://qsimage/' "$pill_notifs"; then
+    printf 'FAIL: Pill notification history can reuse expired Quickshell image handles\n' >&2
+    exit 1
+fi
+
 preview_service="$runtime_root/services/WindowPreviewService.qml"
 preview_capture="$runtime_root/scripts/capture-windows.sh"
+if ! grep -Fq 'restore_saved_clipboard' "$preview_capture" \
+        || ! grep -A8 -F 'screenshot-window --id "$id"' "$preview_capture" | grep -Fq 'restore_saved_clipboard'; then
+    printf 'FAIL: window preview capture can leave Niri screenshot PNGs in the user clipboard\n' >&2
+    exit 1
+fi
 if ! grep -Fq 'requestedWindowMaxAgeMs' "$preview_service" \
         || ! grep -Fq 'markPreviewDirty(root.lastFocusedWindowId)' "$preview_service" \
         || ! grep -Fq '"-printf", "%f\\t%T@\\n"' "$preview_service" \
