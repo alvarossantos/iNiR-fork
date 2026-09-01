@@ -102,7 +102,6 @@ Rectangle {
     signal openEventsDialog(var editEvent)
     signal requestExpand(string widgetType)
     readonly property string activeTabType: root.tabs[root.selectedTab]?.type ?? ""
-    readonly property bool activeTabExpandable: ["calendar", "events", "todo"].indexOf(root.activeTabType) !== -1
 
     // Events component
     Component {
@@ -111,6 +110,7 @@ Rectangle {
             anchors.fill: parent
             anchors.margins: 5
             onOpenEventsDialog: (editEvent) => root.openEventsDialog(editEvent)
+            onRequestExpand: root.requestExpand("events")
         }
     }
 
@@ -302,33 +302,10 @@ Rectangle {
                 }
             }
 
-            CalendarHeaderButton {
-                id: expandBtn
-                visible: root.activeTabExpandable
-                height: implicitHeight
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.top: collapseBtn.bottom
-                anchors.topMargin: 2
-                forceCircle: true
-                colBackground: "transparent"
-                downAction: () => root.requestExpand(root.activeTabType)
-                contentItem: Item {
-                    MaterialSymbol {
-                        anchors.centerIn: parent
-                        text: "open_in_full"
-                        iconSize: Appearance.font.pixelSize.normal
-                        color: Appearance.zzzEverywhere ? Appearance.zzz.accent
-                            : Appearance.inirEverywhere ? Appearance.inir.colPrimary
-                            : Appearance.colors.colPrimary
-                    }
-                }
-                StyledToolTip { text: Translation.tr("Open full view") }
-            }
-
             // Scrollable tab buttons
             Flickable {
                 id: railFlickable
-                anchors.top: expandBtn.visible ? expandBtn.bottom : collapseBtn.bottom
+                anchors.top: collapseBtn.bottom
                 anchors.topMargin: 4
                 anchors.bottom: parent.bottom
                 anchors.left: parent.left
@@ -345,19 +322,14 @@ Rectangle {
                 ColumnLayout {
                     id: tabColumn
                     width: parent.width
+                    y: Math.max(0, (railFlickable.height - implicitHeight) / 2)
                     spacing: 0
-
-                    // Spacer to center vertically when content is small
-                    Item {
-                        Layout.fillHeight: true
-                        visible: railFlickable.contentHeight < railFlickable.height
-                    }
 
                     NavigationRailTabArray {
                         id: tabBar
                         Layout.alignment: Qt.AlignLeft
                         Layout.leftMargin: 5
-                        // Override default topMargin of 25 to restore original vertical positioning
+                        // Keep the rail geometry independent from the active widget.
                         Layout.topMargin: 0
                         currentIndex: root.selectedTab
                         expanded: false
@@ -373,12 +345,6 @@ Rectangle {
                                 }
                             }
                         }
-                    }
-
-                    // Spacer to center vertically when content is small
-                    Item {
-                        Layout.fillHeight: true
-                        visible: railFlickable.contentHeight < railFlickable.height
                     }
                 }
             }
@@ -508,6 +474,7 @@ Rectangle {
             anchors.margins: 5
             onDayWithEventsClicked: (date) => root.switchToEventsTab()
             onOpenEventsDialog: (editEvent) => root.openEventsDialog(editEvent)
+            onRequestExpand: root.requestExpand("calendar")
         }
     }
 
@@ -517,6 +484,7 @@ Rectangle {
         TodoWidget {
             anchors.fill: parent
             anchors.margins: 5
+            onRequestExpand: root.requestExpand("todo")
         }
     }
 
