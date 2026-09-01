@@ -587,6 +587,7 @@ Scope {
         // owns this output. Manual GameMode only disables expensive rendering;
         // explicit opens and their exit animation remain usable.
         visible: root._nativeHostMapped && !GlobalStates.screenLocked
+            && root.roleOpen
             && (!root.fullscreenCovered || root.presentationOpen
                 || sidebarContentLoader.animating)
         updatesEnabled: sidebarRoot.visible && root._renderUpdatesNeeded

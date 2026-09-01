@@ -9,3 +9,4 @@ IdleInhibitor 1.0 IdleInhibitor.qml
 NetworkToggle 1.0 NetworkToggle.qml
 NightLight 1.0 NightLight.qml
 QuickToggleButton 1.0 QuickToggleButton.qml
+ScreenMirrorToggle 1.0 ScreenMirrorToggle.qml

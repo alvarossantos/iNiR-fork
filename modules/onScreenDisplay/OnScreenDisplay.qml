@@ -31,7 +31,7 @@ Scope {
     }
     property string currentIndicator: "volume"
     property bool _syncingOpenStates: false
-    readonly property bool osdActive: GlobalStates.osdVolumeOpen || GlobalStates.osdBrightnessOpen || GlobalStates.osdMicOpen || GlobalStates.osdMediaOpen || GlobalStates.osdKeyboardLayoutOpen
+    readonly property bool osdActive: GlobalStates.osdVolumeOpen || GlobalStates.osdBrightnessOpen || GlobalStates.osdMicOpen || GlobalStates.osdMediaOpen || GlobalStates.osdKeyboardLayoutOpen || GlobalStates.osdTouchpadOpen
     readonly property bool mediaOsdVisible: GlobalStates.osdMediaOpen
         && root.currentIndicator === "media"
     property bool _surfaceRetained: false
@@ -61,22 +61,27 @@ Scope {
             id: "keyboardLayout",
             sourceUrl: "indicators/KeyboardLayoutIndicator.qml"
         },
+        {
+            id: "touchpad",
+            sourceUrl: "indicators/TouchpadIndicator.qml"
+        },
     ]
 
-    function setOpenStates(volume, brightness, mic, media, keyboardLayout) {
+    function setOpenStates(volume, brightness, mic, media, keyboardLayout, touchpad) {
         root._syncingOpenStates = true;
         GlobalStates.osdVolumeOpen = volume;
         GlobalStates.osdBrightnessOpen = brightness;
         GlobalStates.osdMicOpen = mic;
         GlobalStates.osdMediaOpen = media;
         GlobalStates.osdKeyboardLayoutOpen = keyboardLayout;
+        GlobalStates.osdTouchpadOpen = touchpad;
         root._syncingOpenStates = false;
         root._reconcilePresentation()
     }
 
     function hideOsd() {
         osdTimeout.stop();
-        root.setOpenStates(false, false, false, false, false);
+        root.setOpenStates(false, false, false, false, false, false);
         root.protectionMessage = "";
     }
 
@@ -121,7 +126,8 @@ Scope {
             indicator === "brightness",
             indicator === "mic",
             indicator === "media",
-            indicator === "keyboardLayout"
+            indicator === "keyboardLayout",
+            indicator === "touchpad"
         );
         if (autoHide)
             osdTimeout.restart();
@@ -267,6 +273,14 @@ Scope {
     }
 
     Connections {
+        target: TouchpadService
+        function onPopupSequenceChanged() {
+            root.currentIndicator = "touchpad";
+            root.triggerOsd();
+        }
+    }
+
+    Connections {
         target: MprisController
         function onTrackChanged(reverse: bool): void {
             if (root.mediaOsdVisible)
@@ -297,8 +311,8 @@ Scope {
                 WlrLayershell.namespace: "quickshell:onScreenDisplay"
             WlrLayershell.layer: WlrLayer.Overlay
             anchors {
-                top: root.currentIndicator === "keyboardLayout" ? true : !(Config.options?.bar?.bottom ?? false)
-                bottom: root.currentIndicator === "keyboardLayout" ? false : Config.options?.bar?.bottom ?? false
+                top: root.currentIndicator === "keyboardLayout" || root.currentIndicator === "touchpad" ? true : !(Config.options?.bar?.bottom ?? false)
+                bottom: root.currentIndicator === "keyboardLayout" || root.currentIndicator === "touchpad" ? false : Config.options?.bar?.bottom ?? false
             }
             mask: Region {
                 item: osdValuesWrapper
@@ -318,7 +332,7 @@ Scope {
                 id: columnLayout
                 anchors.horizontalCenter: parent.horizontalCenter
 
-                readonly property bool entersFromTop: root.currentIndicator === "keyboardLayout"
+                readonly property bool entersFromTop: root.currentIndicator === "keyboardLayout" || root.currentIndicator === "touchpad"
                     || !(Config.options?.bar?.bottom ?? false)
                 property real openProgress: root._visualOpen ? 1 : 0
                 transformOrigin: entersFromTop ? Item.Top : Item.Bottom

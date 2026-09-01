@@ -18,5 +18,6 @@ AndroidOnScreenKeyboardToggle 1.0 AndroidOnScreenKeyboardToggle.qml
 AndroidPowerProfileToggle 1.0 AndroidPowerProfileToggle.qml
 AndroidQuickToggleButton 1.0 AndroidQuickToggleButton.qml
 AndroidScreenSnipToggle 1.0 AndroidScreenSnipToggle.qml
+AndroidScreenMirrorToggle 1.0 AndroidScreenMirrorToggle.qml
 AndroidToggleDelegateChooser 1.0 AndroidToggleDelegateChooser.qml
 AndroidVoiceSearch 1.0 AndroidVoiceSearch.qml

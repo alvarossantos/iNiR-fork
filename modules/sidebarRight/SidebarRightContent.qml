@@ -517,8 +517,6 @@ Item {
             glassEnabled: true
         }
 
-        clip: true
-
         layer.enabled: root.panelVisible && !gameModeMinimal
         layer.smooth: false
         layer.mipmap: false
