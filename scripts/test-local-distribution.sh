@@ -185,6 +185,16 @@ if grep -Fq 'rpmfusion-nonfree-release' "$fedora_installer"; then
     printf 'FAIL: Fedora installer enables RPM Fusion Nonfree without an iNiR dependency requiring it\n' >&2
     exit 1
 fi
+sddm_installer="$runtime_root/scripts/sddm/install-pixel-sddm.sh"
+if grep -Eq '^[[:space:]]*DisplayServer=' "$sddm_installer" \
+        || grep -Eq '^[[:space:]]*InputMethod=' "$sddm_installer"; then
+    printf 'FAIL: ii-pixel theme installer overrides distro-owned SDDM greeter backend/input policy\n' >&2
+    exit 1
+fi
+if ! grep -Fq 'Current=${THEME_NAME}' "$sddm_installer"; then
+    printf 'FAIL: ii-pixel theme installer no longer configures the SDDM theme\n' >&2
+    exit 1
+fi
 if grep -Fq '${cmd_to_pkg[$cmd]:-$cmd}' "$fedora_installer"; then
     printf 'FAIL: Fedora Doctor repair can still pass unknown command IDs directly to dnf\n' >&2
     exit 1
@@ -501,7 +511,28 @@ if [[ -d "$runtime_root/distro/arch" ]]; then
             printf 'FAIL: %s pkgver=%s != VERSION=%s\n' "$pkg" "$pkg_ver" "$version" >&2
             exit 1
         fi
+        srcinfo_ver="$(awk '/^[[:space:]]*pkgver = / {print $3; exit}' "$runtime_root/distro/arch/$pkg/.SRCINFO")"
+        if [[ "$srcinfo_ver" != "$version" ]]; then
+            printf 'FAIL: %s .SRCINFO pkgver=%s != VERSION=%s\n' "$pkg" "$srcinfo_ver" "$version" >&2
+            exit 1
+        fi
     done
+
+    deps_ver="$(grep -m1 '^pkgver=' "$runtime_root/sdata/dist-arch/inir-deps/PKGBUILD" | cut -d= -f2)"
+    if [[ "$deps_ver" != "$version" ]]; then
+        printf 'FAIL: inir-deps pkgver=%s != VERSION=%s\n' "$deps_ver" "$version" >&2
+        exit 1
+    fi
+
+    if ! grep -Fq "iNiR/${version} (https://github.com/snowarch/inir)" "$runtime_root/scripts/lyrics/lyrics.py"; then
+        printf 'FAIL: lyrics User-Agent does not match VERSION=%s\n' "$version" >&2
+        exit 1
+    fi
+
+    if ! grep -Fq "version-${version}-blue" "$runtime_root/README.md"; then
+        printf 'FAIL: README release badge does not match VERSION=%s\n' "$version" >&2
+        exit 1
+    fi
 fi
 
 step "launcher resolution"
