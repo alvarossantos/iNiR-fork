@@ -48,6 +48,21 @@ ContentPage {
     }
     readonly property string effectiveScreenshotPath: Directories.screenshotsPath
     readonly property string detectedDefaultAudioSource: detectedDefaultSink.length > 0 ? `${detectedDefaultSink}.monitor` : ""
+    readonly property var ocrLanguageOptions: [
+        { value: "auto", displayName: Translation.tr("Auto (system language)") },
+        { value: "eng", displayName: Translation.tr("English") },
+        { value: "spa", displayName: Translation.tr("Spanish") },
+        { value: "rus", displayName: Translation.tr("Russian") },
+        { value: "jpn", displayName: Translation.tr("Japanese") },
+        { value: "jpn_vert", displayName: Translation.tr("Japanese (vertical)") },
+        { value: "chi_sim", displayName: Translation.tr("Chinese (Simplified)") },
+        { value: "chi_sim_vert", displayName: Translation.tr("Chinese (Simplified, vertical)") },
+        { value: "chi_tra", displayName: Translation.tr("Chinese (Traditional)") },
+        { value: "chi_tra_vert", displayName: Translation.tr("Chinese (Traditional, vertical)") },
+        { value: "eng+spa", displayName: Translation.tr("English + Spanish") },
+        { value: "jpn+eng", displayName: Translation.tr("Japanese + English") }
+    ]
+
     readonly property var recordingAudioModeOptions: [
         { value: "none", displayName: Translation.tr("No audio") },
         { value: "system", displayName: Translation.tr("System audio") },
@@ -764,6 +779,40 @@ ContentPage {
                     StyledToolTip {
                         text: Translation.tr("The unified snip menu reopens with the action and shape last picked in its toolbar. Dedicated screenshot, OCR and visual-search shortcuts always keep their explicit action. Recording is never remembered. When off, the menu opens as a rectangle screenshot.")
                     }
+                }
+            }
+
+            ContentSubsection {
+                title: Translation.tr("OCR language")
+
+                RecordingDropdownField {
+                    title: Translation.tr("Recognition language")
+                    description: Translation.tr("Use one language when possible for better accuracy. Auto follows the current system locale; vertical Japanese and Chinese models are available for manga and vertical text.")
+                    readonly property string configuredLanguage: Config.options?.regionSelector?.ocrLanguage ?? "auto"
+                    options: root.ensureOption(root.ocrLanguageOptions, configuredLanguage,
+                        `${Translation.tr("Custom")}: ${configuredLanguage}`)
+                    currentValue: configuredLanguage
+                    onSelected: newValue => Config.setNestedValue("regionSelector.ocrLanguage", newValue)
+                }
+
+                ContentSubsectionLabel {
+                    text: Translation.tr("Custom Tesseract language code")
+                }
+                MaterialTextField {
+                    Layout.fillWidth: true
+                    placeholderText: "deu  ·  fra  ·  kor  ·  eng+deu"
+                    text: Config.options?.regionSelector?.ocrLanguage ?? "auto"
+                    onEditingFinished: {
+                        const value = text.trim()
+                        if (value.length > 0) Config.setNestedValue("regionSelector.ocrLanguage", value)
+                    }
+                }
+                StyledText {
+                    Layout.fillWidth: true
+                    text: Translation.tr("Any Tesseract model installed on the system can be used; combine model codes with + only when the captured text genuinely mixes languages.")
+                    color: Appearance.colors.colSubtext
+                    font.pixelSize: Appearance.font.pixelSize.smallie
+                    wrapMode: Text.WordWrap
                 }
             }
 

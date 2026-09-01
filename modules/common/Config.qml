@@ -2838,6 +2838,9 @@ Singleton {
                 // Remember the snip action/shape picked in the overlay toolbar,
                 // so the screenshot keybind reopens with the same choice.
                 property bool rememberSnipChoice: true
+                // Tesseract language expression. "auto" follows the session locale;
+                // explicit values may combine installed models with +.
+                property string ocrLanguage: "auto"
                 property int lastAction: 0 // SnipAction ordinal: 0 Shot, 1 Edit, 2 Search, 3 OCR (Record never persists)
                 property int lastMode: 0 // SelectionMode ordinal: 0 rectangle, 1 circle
                 property JsonObject targetRegions: JsonObject {

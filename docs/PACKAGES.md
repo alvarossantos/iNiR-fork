@@ -124,7 +124,9 @@ Region tools dependencies.
 | `slurp` | Region selection |
 | `swappy` | Screenshot editor |
 | `tesseract` | OCR engine |
-| `tesseract-data-eng` | English OCR data |
+| `tesseract-data-eng` / `spa` / `rus` | English, Spanish, Russian OCR data |
+| `tesseract-data-jpn` / `jpn_vert` | Japanese horizontal/vertical OCR data |
+| `tesseract-data-chi_sim*` / `chi_tra*` | Simplified/Traditional Chinese horizontal/vertical OCR data |
 | `wf-recorder` | Screen recording |
 | `imagemagick` | Image processing |
 | `ffmpeg` | Video processing |
@@ -151,8 +153,9 @@ Input simulation, hardware control, and idle management.
 | `fprintd` | Fingerprint authentication (lock screen) |
 | `libqalculate` | Calculator backend |
 | `tesseract` | OCR engine |
-| `tesseract-data-eng` | English OCR data |
-| `tesseract-data-spa` | Spanish OCR data |
+| `tesseract-data-eng` / `spa` / `rus` | English, Spanish, Russian OCR data |
+| `tesseract-data-jpn` / `jpn_vert` | Japanese horizontal/vertical OCR data |
+| `tesseract-data-chi_sim*` / `chi_tra*` | Simplified/Traditional Chinese horizontal/vertical OCR data |
 
 ---
 

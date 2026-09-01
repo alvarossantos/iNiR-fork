@@ -84,7 +84,6 @@ check_dependencies() {
         "playerctl:playerctl"
         "notify-send:libnotify"
         "flock:util-linux"
-        "go:go"
         "wlsunset:wlsunset"
         "easyeffects:EasyEffects"
         "uv:uv"
@@ -101,7 +100,6 @@ check_dependencies() {
         "blueman-manager:Blueman"
         "gowall:gowall"
         "kwriteconfig6:KConfig"
-        "checkupdates:pacman-contrib"
         "ddcutil:ddcutil"
         "missioncenter:mission-center"
         "nm-connection-editor:nm-connection-editor"
@@ -112,6 +110,13 @@ check_dependencies() {
         "songrec:SongRec"
         "trans:translate-shell"
     )
+
+    # Arch's update service uses checkupdates from pacman-contrib. Other
+    # distros have their own package managers, so treating it as a universal
+    # runtime dependency creates a permanently-failing Doctor result.
+    if [[ "${OS_GROUP_ID:-unknown}" == "arch" ]]; then
+        cmds+=("checkupdates:pacman-contrib")
+    fi
 
     # Check required commands
     for item in "${cmds[@]}"; do

@@ -65,49 +65,141 @@ ensure_copr_support() {
   }
 }
 
+ensure_fedora_rust_toolchain() {
+  if command -v cargo &>/dev/null && command -v rustc &>/dev/null; then
+    return 0
+  fi
+  log_info "Installing Rust toolchain for Fedora source fallbacks..."
+  sudo dnf install -y rust cargo >/dev/null 2>&1
+}
+
+install_awww_fedora() {
+  if command -v awww &>/dev/null && command -v awww-daemon &>/dev/null; then
+    return 0
+  fi
+  ensure_fedora_rust_toolchain || return 1
+  sudo dnf install -y lz4-devel libxkbcommon-devel wayland-devel wayland-protocols-devel >/dev/null 2>&1 || return 1
+
+  local temp_root
+  temp_root="$(mktemp -d /tmp/inir-awww.XXXXXX)" || return 1
+  if cargo install --root "$temp_root" --git https://codeberg.org/LGFae/awww.git awww >/dev/null 2>&1 \
+      && [[ -x "$temp_root/bin/awww" && -x "$temp_root/bin/awww-daemon" ]]; then
+    sudo install -m 0755 "$temp_root/bin/awww" "$temp_root/bin/awww-daemon" /usr/local/bin/
+  fi
+  rm -rf "$temp_root"
+  command -v awww &>/dev/null && command -v awww-daemon &>/dev/null
+}
+
+install_gowall_fedora() {
+  command -v gowall &>/dev/null && return 0
+
+  # Upstream's documented Fedora path is the achno/gowall COPR. Keep a source
+  # fallback for derivatives or networks where that repository is unavailable.
+  if ensure_copr_support; then
+    if ! dnf copr list --enabled 2>/dev/null | grep -q 'achno/gowall'; then
+      sudo dnf copr enable -y achno/gowall >/dev/null 2>&1 || true
+    fi
+    sudo dnf install -y gowall >/dev/null 2>&1 || true
+  fi
+  command -v gowall &>/dev/null && return 0
+
+  sudo dnf install -y golang >/dev/null 2>&1 || return 1
+  local build_dir
+  build_dir="$(mktemp -d /tmp/inir-gowall.XXXXXX)" || return 1
+  if git clone --depth 1 https://github.com/Achno/gowall.git "$build_dir/src" >/dev/null 2>&1 \
+      && (cd "$build_dir/src" && go build -o "$build_dir/gowall" . >/dev/null 2>&1); then
+    sudo install -m 0755 "$build_dir/gowall" /usr/local/bin/gowall
+  fi
+  rm -rf "$build_dir"
+  command -v gowall &>/dev/null
+}
+
+install_missioncenter_fedora() {
+  command -v missioncenter &>/dev/null && return 0
+  sudo dnf install -y flatpak >/dev/null 2>&1 || return 1
+  flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo >/dev/null 2>&1 || true
+  flatpak install -y --user flathub io.missioncenter.MissionCenter >/dev/null 2>&1 || return 1
+
+  local wrapper
+  wrapper="$(mktemp /tmp/inir-missioncenter.XXXXXX)" || return 1
+  printf '%s\n' '#!/bin/sh' 'exec flatpak run io.missioncenter.MissionCenter "$@"' > "$wrapper"
+  sudo install -m 0755 "$wrapper" /usr/local/bin/missioncenter
+  rm -f "$wrapper"
+  command -v missioncenter &>/dev/null
+}
+
+install_songrec_fedora() {
+  command -v songrec &>/dev/null && return 0
+  ensure_fedora_rust_toolchain || return 1
+  sudo dnf install -y \
+    alsa-lib-devel pulseaudio-libs-devel pipewire-devel openssl-devel dbus-devel \
+    pkgconf-pkg-config glib2-devel gtk4-devel libsoup3-devel libadwaita-devel \
+    >/dev/null 2>&1 || return 1
+
+  local temp_root
+  temp_root="$(mktemp -d /tmp/inir-songrec.XXXXXX)" || return 1
+  if cargo install --root "$temp_root" songrec --no-default-features -F gui,ffmpeg,pulse,mpris >/dev/null 2>&1 \
+      && [[ -x "$temp_root/bin/songrec" ]]; then
+    sudo install -m 0755 "$temp_root/bin/songrec" /usr/local/bin/songrec
+  fi
+  rm -rf "$temp_root"
+  command -v songrec &>/dev/null
+}
+
 #####################################################################################
 # Optional: install only a specific list of missing deps
 #####################################################################################
 if [[ -n "${ONLY_MISSING_DEPS:-}" ]]; then
   tui_info "Installing missing dependencies only..."
 
+  # Doctor reports command IDs, not package names. Keep this mapping exhaustive
+  # for Fedora and never pass an unknown command ID directly to dnf.
   declare -A cmd_to_pkg=(
-    [qs]="quickshell"
-    [niri]="niri"
-    [nmcli]="NetworkManager"
-    [wpctl]="wireplumber"
-    [jq]="jq"
-    [rsync]="rsync"
-    [curl]="curl"
-    [git]="git"
-    [python3]="python3"
-    [wlsunset]="wlsunset"
-    [dunstify]="dunst"
-    [fish]="fish"
-    [magick]="ImageMagick"
-    [swaylock]="swaylock"
-    [swayidle]="swayidle"
-    [grim]="grim"
-    [mpv]="mpv"
-    [cliphist]="cliphist"
-    [wl-copy]="wl-clipboard"
-    [wl-paste]="wl-clipboard"
-    [fuzzel]="fuzzel"
-    [gum]="gum"
-    [hyprpicker]="hyprpicker"
-    [xwayland-satellite]="xwayland-satellite"
-    [missioncenter]="io.missioncenter.MissionCenter"
+    [qs]="quickshell" [niri]="niri" [nmcli]="NetworkManager" [wpctl]="wireplumber"
+    [jq]="jq" [rsync]="rsync" [curl]="curl" [git]="git" [python3]="python3"
+    [fish]="fish" [magick]="ImageMagick" [grim]="grim" [cliphist]="cliphist"
+    [wl-copy]="wl-clipboard" [wl-paste]="wl-clipboard" [fuzzel]="fuzzel"
+    [hyprpicker]="hyprpicker" [playerctl]="playerctl" [notify-send]="libnotify"
+    [flock]="util-linux" [wlsunset]="wlsunset" [easyeffects]="easyeffects"
+    [uv]="uv" [cava]="cava" [qalc]="qalculate" [yt-dlp]="yt-dlp"
+    [socat]="socat" [brightnessctl]="brightnessctl" [slurp]="slurp"
+    [wf-recorder]="wf-recorder" [ffmpeg]="ffmpeg" [swappy]="swappy"
+    [tesseract]="tesseract" [blueman-manager]="blueman" [kwriteconfig6]="kf6-kconfig"
+    [ddcutil]="ddcutil" [nm-connection-editor]="nm-connection-editor"
+    [xdg-settings]="xdg-utils" [mpv]="mpv" [swaylock]="swaylock"
+    [swayidle]="swayidle" [trans]="translate-shell"
   )
 
   _fed_installflags=""
-  $ask || _fed_installflags="-y --skip-unavailable"
-
+  $ask || _fed_installflags="-y"
   _fed_miss_cmds=()
   _fed_miss_pkgs=()
+  _fed_special_cmds=()
+  _fed_unresolved=()
   read -r -a _fed_miss_cmds <<<"$ONLY_MISSING_DEPS"
+
   for cmd in "${_fed_miss_cmds[@]}"; do
-    _fed_pkg="${cmd_to_pkg[$cmd]:-$cmd}"
-    [[ " ${_fed_miss_pkgs[*]} " == *" ${_fed_pkg} "* ]] || _fed_miss_pkgs+=("$_fed_pkg")
+    case "$cmd" in
+      awww|awww-daemon|gowall|missioncenter|songrec)
+        [[ " ${_fed_special_cmds[*]} " == *" ${cmd} "* ]] || _fed_special_cmds+=("$cmd")
+        ;;
+      checkupdates|go)
+        # Legacy Doctor output from older iNiR versions. Neither is a Fedora
+        # runtime dependency: checkupdates is Arch-only and Go is only a build fallback.
+        ;;
+      *)
+        _fed_pkg="${cmd_to_pkg[$cmd]:-}"
+        if [[ -z "$_fed_pkg" ]]; then
+          log_warning "No Fedora repair mapping for Doctor command: $cmd"
+          _fed_unresolved+=("$cmd")
+        elif dnf_pkg_available "$_fed_pkg"; then
+          [[ " ${_fed_miss_pkgs[*]} " == *" ${_fed_pkg} "* ]] || _fed_miss_pkgs+=("$_fed_pkg")
+        else
+          log_warning "Fedora package unavailable for $cmd: $_fed_pkg"
+          _fed_unresolved+=("$cmd")
+        fi
+        ;;
+    esac
   done
 
   if [[ ${#_fed_miss_pkgs[@]} -gt 0 ]]; then
@@ -116,9 +208,6 @@ if [[ -n "${ONLY_MISSING_DEPS:-}" ]]; then
       *) v sudo dnf upgrade -y --refresh ;;
     esac
 
-    # Current Fedora releases ship Niri directly, and Fedora 44+ ships
-    # Quickshell too. Keep COPR only as a compatibility fallback for older
-    # releases or derivatives whose enabled repositories do not provide it.
     if [[ " ${_fed_miss_pkgs[*]} " == *" quickshell " ]] && ! fedora_quickshell_compatible; then
       if ! dnf copr list --enabled 2>/dev/null | grep -q "errornointernet/quickshell"; then
         ensure_copr_support && v sudo dnf copr enable -y errornointernet/quickshell
@@ -130,10 +219,28 @@ if [[ -n "${ONLY_MISSING_DEPS:-}" ]]; then
       fi
     fi
 
-    v sudo dnf install $_fed_installflags "${_fed_miss_pkgs[@]}"
+    v sudo dnf install $_fed_installflags --allowerasing "${_fed_miss_pkgs[@]}" || return 1
   fi
 
+  # Special providers do not correspond 1:1 to a Fedora package name.
+  for cmd in "${_fed_special_cmds[@]}"; do
+    case "$cmd" in
+      awww|awww-daemon)
+        if ! command -v awww &>/dev/null || ! command -v awww-daemon &>/dev/null; then
+          install_awww_fedora || _fed_unresolved+=("awww")
+        fi
+        ;;
+      gowall) install_gowall_fedora || _fed_unresolved+=("gowall") ;;
+      missioncenter) install_missioncenter_fedora || _fed_unresolved+=("missioncenter") ;;
+      songrec) install_songrec_fedora || _fed_unresolved+=("songrec") ;;
+    esac
+  done
+
   unset ONLY_MISSING_DEPS
+  if [[ ${#_fed_unresolved[@]} -gt 0 ]]; then
+    log_error "Could not repair Fedora dependencies: $(printf '%s ' "${_fed_unresolved[@]}")"
+    return 1
+  fi
   return 0
 fi
 
@@ -200,6 +307,9 @@ FEDORA_CORE_PKGS=(
   # (once it provides >=0.3) or the release COPR selected above.
   quickshell
   niri
+
+  # Login manager required by the shipped ii-pixel login theme.
+  sddm
   
   # Build tools (needed for Python packages like dbus-python, pycairo, pygobject)
   gcc
@@ -247,6 +357,7 @@ FEDORA_CORE_PKGS=(
   
   # Network
   NetworkManager
+  nm-connection-editor
   gnome-keyring
   
   # File manager
@@ -334,13 +445,20 @@ FEDORA_TOOLKIT_PKGS=(
   slurp
   hyprpicker
   ImageMagick
-  libqalculate
+  qalculate
   blueman
   fprintd
   kf6-kconfig
   tesseract
   tesseract-langpack-eng
   tesseract-langpack-spa
+  tesseract-langpack-rus
+  tesseract-langpack-jpn
+  tesseract-langpack-jpn_vert
+  tesseract-langpack-chi_sim
+  tesseract-langpack-chi_sim_vert
+  tesseract-langpack-chi_tra
+  tesseract-langpack-chi_tra_vert
 )
 
 # Screen capture packages
@@ -351,6 +469,16 @@ FEDORA_SCREENCAPTURE_PKGS=(
   swappy
   wf-recorder
   ImageMagick
+  tesseract
+  tesseract-langpack-eng
+  tesseract-langpack-spa
+  tesseract-langpack-rus
+  tesseract-langpack-jpn
+  tesseract-langpack-jpn_vert
+  tesseract-langpack-chi_sim
+  tesseract-langpack-chi_sim_vert
+  tesseract-langpack-chi_tra
+  tesseract-langpack-chi_tra_vert
 )
 
 # Font packages
@@ -542,20 +670,19 @@ if ${INSTALL_TOOLKIT:-true} && ! command -v hyprpicker &>/dev/null; then
   unset HYPRPICKER_BUILD_DEPS HYPRPICKER_BUILD_DIR
 fi
 
-# awww - wallpaper daemon (Wayland) — compile from source
-if ! command -v awww &>/dev/null; then
-  log_info "Installing awww (wallpaper daemon)..."
-  if command -v cargo &>/dev/null; then
-    sudo dnf install -y lz4-devel libxkbcommon-devel
-    if cargo install --git https://codeberg.org/LGFae/awww.git awww 2>/dev/null; then
-      log_success "awww installed via Cargo"
-    else
-      log_warning "awww build failed — install manually: cargo install --git https://codeberg.org/LGFae/awww.git awww"
-    fi
-  else
-    log_warning "awww requires Rust — install Rust first, then: cargo install --git https://codeberg.org/LGFae/awww.git awww"
-    log_info "Install Rust: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
-  fi
+# Non-repository runtime providers. These are required by exposed iNiR
+# features, so a successful fresh install must leave their host commands usable.
+if ! install_awww_fedora; then
+  log_warning "awww/awww-daemon are still missing — the internal wallpaper renderer will be used"
+fi
+if ${INSTALL_TOOLKIT:-true} && ! install_gowall_fedora; then
+  log_warning "gowall is still missing — wallpaper editing effects will be unavailable"
+fi
+if ! install_missioncenter_fedora; then
+  log_warning "Mission Center is still missing — configure another task manager in Settings"
+fi
+if ${INSTALL_AUDIO:-true} && ! install_songrec_fedora; then
+  log_warning "songrec is still missing — music recognition will be unavailable"
 fi
 
 # darkly - Qt theme (download .rpm from GitHub)

@@ -383,9 +383,12 @@ PanelWindow {
             case RegionSelection.SnipAction.Search:
                 snipProc.command = ["/usr/bin/bash", "-c", `${cropInPlace} && uploaded_url="$(${uploadAndGetUrl(root.screenshotPath)})"; if [[ -n "$uploaded_url" && "$uploaded_url" == http* ]]; then /usr/bin/xdg-open "${root.effectiveImageSearchEngineBaseUrl}$uploaded_url"; else /usr/bin/notify-send "Image search failed" "Could not upload the image for reverse search" -a "Image Search" -i image; fi; ${cleanup}`]
                 break;
-            case RegionSelection.SnipAction.CharRecognition:
-                snipProc.command = ["/usr/bin/bash", "-c", `${cropInPlace} && /usr/bin/tesseract '${StringUtils.shellSingleQuoteEscape(root.screenshotPath)}' stdout -l $(/usr/bin/tesseract --list-langs | /usr/bin/awk 'NR>1{print $1}' | /usr/bin/tr '\\n' '+' | /usr/bin/sed 's/\\+$/\\n/') | tee >(/usr/bin/wl-copy --primary) | /usr/bin/wl-copy && ${cleanup} && /usr/bin/notify-send "Text recognized" "OCR text copied to clipboard" -a "OCR" -i edit-find -t 3000`]
+            case RegionSelection.SnipAction.CharRecognition: {
+                const ocrLanguage = String(Config.options?.regionSelector?.ocrLanguage ?? "auto");
+                const ocrRunner = StringUtils.shellSingleQuoteEscape(Quickshell.shellPath("scripts/ocr-runner.sh"));
+                snipProc.command = ["/usr/bin/bash", "-c", `${cropInPlace} && { '${ocrRunner}' '${StringUtils.shellSingleQuoteEscape(root.screenshotPath)}' '${StringUtils.shellSingleQuoteEscape(ocrLanguage)}' | tee >(/usr/bin/wl-copy --primary) | /usr/bin/wl-copy; _ocr_status=\${PIPESTATUS[0]}; ${cleanup}; if (( _ocr_status == 0 )); then /usr/bin/notify-send "Text recognized" "OCR text copied to clipboard" -a "OCR" -i edit-find -t 3000; else /usr/bin/notify-send "OCR failed" "The selected OCR language is unavailable or recognition failed" -a "OCR" -i dialog-error -t 4000; exit $_ocr_status; fi; }`];
                 break;
+            }
             case RegionSelection.SnipAction.Record:
                 snipProc.command = ["/usr/bin/bash", "-c", `${Directories.recordScriptPath} --region '${slurpRegion}'`]
                 break;

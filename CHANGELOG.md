@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Local Japanese dictionary backend**: iNiR can import Yomitan v3 dictionary ZIPs into a local SQLite index and query exact terms, longest OCR-text prefixes, term metadata such as pitch/frequency, and kanji information. This is the offline data layer for the planned contextual Japanese OCR lookup surface; no incomplete popup is exposed yet.
+
 ### Changed
+- **Expandable calendar/task surfaces**: Dashboard Calendar, Agenda, and To Do cards plus the normal right-sidebar organizer tabs now expose a consistent full-detail layer with proper back/Escape behavior; the compact sidebar's truncated Upcoming block has an explicit route to its full Events section.
+- **Multilingual OCR**: region OCR now selects a configured Tesseract model instead of combining every installed language, follows the session locale in Auto mode, and ships repository-backed English, Spanish, Russian, Japanese, Simplified Chinese, and Traditional Chinese data (including vertical Japanese/Chinese models) across Arch, Fedora, and Debian/Ubuntu install paths.
 - **Arch install fast path**: packages now available in Arch `extra` (Mission Center, Material Symbols, JetBrains Mono Nerd, adw-gtk-theme, Capitaine cursors, and uv) stay on the signed mirror path instead of being routed through AUR; remaining AUR fonts are attempted as one batch with the existing per-package/direct-download recovery kept for restricted networks.
 - **Fedora/Debian repository-first setup**: Fedora now prefers current distro packages for Niri, uv, eza, cliphist and related tooling, uses the Quickshell release COPR only while Fedora's own package remains below iNiR's 0.3 runtime requirement, batches repository installs, and no longer enables RPM Fusion Nonfree unnecessarily. Debian 13 can reuse the user's own mirror for `contrib` and `trixie-backports`, gaining prebuilt Quickshell/Hyprpicker plus stable Starship/eza while preserving source/download fallbacks; Trixie's current Polkit package split is handled explicitly.
 
 ### Fixed
+- **Fedora Doctor dependency repair**: missing-command recovery now maps Fedora command IDs to real RPM names, scopes Arch-only `checkupdates` correctly, and uses dedicated providers for awww, Gowall, Mission Center, and SongRec instead of passing Arch names/Flatpak IDs directly to DNF; fresh Fedora installs now include the `qalc` and NetworkManager editor runtime packages as well.
 - **Duplicate Python environment setup**: fresh installs no longer resolve and sync the same uv environment once in the distro dependency phase and again after the runtime files are installed; the files phase remains the single owner.
 - **Arch dependency tracker drift**: `inir-deps` now retains every official package declared by the normal dependency bundles, including OCR language data, awww, Cava/EasyEffects, input helpers, translation/color tools and the packages promoted from AUR, so orphan cleanup cannot quietly remove pieces of a full iNiR install.
 - **InnerTube on Debian stable**: YouTube Music browsing now prefers distro-provided `ytmusicapi` on Arch/Fedora/Ubuntu but can run through iNiR's managed Python environment when Debian stable lacks the package, avoiding a permanently broken InnerTune surface without forcing PyPI on distros that already provide signed packages.

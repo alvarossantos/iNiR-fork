@@ -176,12 +176,33 @@ fi
 
 fedora_installer="$runtime_root/sdata/dist-fedora/install-deps.sh"
 if ! grep -Fq 'fedora_quickshell_compatible' "$fedora_installer" \
-        || ! grep -Fq 'FEDORA_REPO_PKGS=' "$fedora_installer"; then
-    printf 'FAIL: Fedora installer lost repository-first/version-aware package planning\n' >&2
+        || ! grep -Fq 'FEDORA_REPO_PKGS=' "$fedora_installer" \
+        || ! grep -Eq '^[[:space:]]+sddm$' "$fedora_installer"; then
+    printf 'FAIL: Fedora installer lost repository-first/version-aware package planning or SDDM\n' >&2
     exit 1
 fi
 if grep -Fq 'rpmfusion-nonfree-release' "$fedora_installer"; then
     printf 'FAIL: Fedora installer enables RPM Fusion Nonfree without an iNiR dependency requiring it\n' >&2
+    exit 1
+fi
+if grep -Fq '${cmd_to_pkg[$cmd]:-$cmd}' "$fedora_installer"; then
+    printf 'FAIL: Fedora Doctor repair can still pass unknown command IDs directly to dnf\n' >&2
+    exit 1
+fi
+for required in \
+    '[qalc]="qalculate"' \
+    '[nm-connection-editor]="nm-connection-editor"' \
+    'install_awww_fedora' \
+    'install_gowall_fedora' \
+    'install_missioncenter_fedora' \
+    'install_songrec_fedora'; do
+    if ! grep -Fq "$required" "$fedora_installer"; then
+        printf 'FAIL: Fedora dependency repair lost required route: %s\n' "$required" >&2
+        exit 1
+    fi
+done
+if ! grep -Fq '[[ "${OS_GROUP_ID:-unknown}" == "arch" ]]' "$runtime_root/sdata/lib/doctor.sh"; then
+    printf 'FAIL: Doctor no longer scopes checkupdates to Arch\n' >&2
     exit 1
 fi
 
@@ -196,6 +217,66 @@ if grep -Fq 'tui_info "Setting up Rust toolchain..."' "$debian_installer"; then
     printf 'FAIL: Debian installer installs Rust unconditionally instead of only for source fallbacks\n' >&2
     exit 1
 fi
+
+ocr_runner="$runtime_root/scripts/ocr-runner.sh"
+region_selector="$runtime_root/modules/regionSelector/RegionSelection.qml"
+if [[ ! -x "$ocr_runner" ]] \
+        || ! grep -Fq 'property string ocrLanguage: "auto"' "$runtime_root/modules/common/Config.qml" \
+        || ! grep -Fq 'scripts/ocr-runner.sh' "$region_selector"; then
+    printf 'FAIL: multilingual OCR runtime/config wiring is incomplete\n' >&2
+    exit 1
+fi
+if grep -Fq 'tesseract --list-langs |' "$region_selector"; then
+    printf 'FAIL: region OCR still combines every installed Tesseract language\n' >&2
+    exit 1
+fi
+for pkg in tesseract-data-rus tesseract-data-jpn tesseract-data-jpn_vert tesseract-data-chi_sim tesseract-data-chi_tra; do
+    grep -Fq "$pkg" "$runtime_root/sdata/dist-arch/inir-screencapture/PKGBUILD" || {
+        printf 'FAIL: Arch screencapture bundle is missing OCR language package %s\n' "$pkg" >&2
+        exit 1
+    }
+done
+for pkg in tesseract-langpack-rus tesseract-langpack-jpn tesseract-langpack-jpn_vert tesseract-langpack-chi_sim tesseract-langpack-chi_tra; do
+    grep -Fq "$pkg" "$fedora_installer" || {
+        printf 'FAIL: Fedora installer is missing OCR language package %s\n' "$pkg" >&2
+        exit 1
+    }
+done
+for pkg in tesseract-ocr-rus tesseract-ocr-jpn tesseract-ocr-jpn-vert tesseract-ocr-chi-sim tesseract-ocr-chi-tra; do
+    grep -Fq "$pkg" "$debian_installer" || {
+        printf 'FAIL: Debian installer is missing OCR language package %s\n' "$pkg" >&2
+        exit 1
+    }
+done
+
+jp_dictionary="$runtime_root/scripts/japanese-dictionary.py"
+if [[ ! -x "$jp_dictionary" ]]; then
+    printf 'FAIL: Japanese dictionary backend is missing or not executable\n' >&2
+    exit 1
+fi
+python3 - "$jp_dictionary" <<'PYTEST'
+import json, subprocess, sys, tempfile, zipfile
+from pathlib import Path
+
+script = Path(sys.argv[1])
+with tempfile.TemporaryDirectory() as td:
+    root = Path(td)
+    archive = root / "test.zip"
+    db = root / "dictionary.sqlite3"
+    with zipfile.ZipFile(archive, "w") as z:
+        z.writestr("index.json", json.dumps({"title": "iNiR Test", "revision": "1", "format": 3}))
+        z.writestr("term_bank_1.json", json.dumps([["食べる", "たべる", "v1", "v1", 10, ["to eat"], 1, "common"]], ensure_ascii=False))
+        z.writestr("term_meta_bank_1.json", json.dumps([["食べる", "pitch", {"reading": "たべる", "pitches": [{"position": 2}]}]], ensure_ascii=False))
+        z.writestr("kanji_bank_1.json", json.dumps([["食", "ショク", "た.べる", "", ["eat"], {}]], ensure_ascii=False))
+    def run(*args):
+        proc = subprocess.run([sys.executable, str(script), "--db", str(db), *args], check=True, text=True, capture_output=True)
+        return json.loads(proc.stdout)
+    assert run("import", str(archive))["terms"] == 1
+    scanned = run("scan", "食べる猫")
+    assert scanned["matched"] == "食べる"
+    assert scanned["metadata"]["pitch"][0]["data"]["pitches"][0]["position"] == 2
+    assert run("kanji", "食")["kanji"][0]["meanings"] == ["eat"]
+PYTEST
 
 python_setup_owners=$(grep -l 'v install-python-packages' \
     "$runtime_root"/sdata/dist-*/install-deps.sh \

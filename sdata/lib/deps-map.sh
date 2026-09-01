@@ -104,6 +104,7 @@ DEPS_AUDIO_MPV_MPRIS="arch:mpv-mpris fedora:mpv-mpris debian:mpv-mpris ubuntu:mp
 DEPS_AUDIO_YTDLP="arch:yt-dlp fedora:yt-dlp debian:yt-dlp ubuntu:yt-dlp opensuse:yt-dlp void:yt-dlp"
 DEPS_AUDIO_YTMUSICAPI="arch:python-ytmusicapi fedora:python3-ytmusicapi debian:python3-ytmusicapi ubuntu:python3-ytmusicapi opensuse:python3-ytmusicapi void:python3-ytmusicapi"
 DEPS_AUDIO_SOCAT="arch:socat fedora:socat debian:socat ubuntu:socat opensuse:socat void:socat"
+DEPS_AUDIO_SONGREC="arch:songrec fedora:COMPILE:https://github.com/marin-m/SongRec debian:COMPILE:https://github.com/marin-m/SongRec ubuntu:songrec opensuse:songrec void:songrec"
 
 ###############################################################################
 # Network
@@ -152,14 +153,14 @@ DEPS_MISC_LIBNOTIFY="arch:libnotify fedora:libnotify debian:libnotify-bin ubuntu
 DEPS_MISC_IMAGEMAGICK="arch:imagemagick fedora:ImageMagick debian:imagemagick ubuntu:imagemagick opensuse:ImageMagick void:ImageMagick"
 DEPS_MISC_FFMPEG="arch:ffmpeg fedora:ffmpeg debian:ffmpeg ubuntu:ffmpeg opensuse:ffmpeg void:ffmpeg"
 DEPS_MISC_TESSERACT="arch:tesseract fedora:tesseract debian:tesseract-ocr ubuntu:tesseract-ocr opensuse:tesseract-ocr void:tesseract-ocr"
-DEPS_MISC_LIBQALCULATE="arch:libqalculate fedora:libqalculate debian:qalc ubuntu:qalc opensuse:libqalculate void:libqalculate"
+DEPS_MISC_LIBQALCULATE="arch:libqalculate fedora:qalculate debian:qalc ubuntu:qalc opensuse:libqalculate void:libqalculate"
 DEPS_MISC_BRIGHTNESSCTL="arch:brightnessctl fedora:brightnessctl debian:brightnessctl ubuntu:brightnessctl opensuse:brightnessctl void:brightnessctl"
 DEPS_MISC_NAUTILUS="arch:nautilus fedora:nautilus debian:nautilus ubuntu:nautilus opensuse:nautilus void:nautilus"
 DEPS_MISC_FOOT="arch:foot fedora:foot debian:foot ubuntu:foot opensuse:foot void:foot"
 DEPS_MISC_KITTY="arch:kitty fedora:kitty debian:kitty ubuntu:kitty opensuse:kitty void:kitty"
 DEPS_MISC_POLKIT="arch:polkit fedora:polkit debian:polkitd ubuntu:policykit-1 opensuse:polkit void:polkit"
 DEPS_MISC_UV="arch:uv fedora:uv debian:CARGO:uv ubuntu:CARGO:uv opensuse:CARGO:uv void:CARGO:uv"
-DEPS_MISC_GOWALL="arch:AUR:gowall-bin fedora:CARGO:gowall debian:CARGO:gowall ubuntu:CARGO:gowall opensuse:CARGO:gowall void:CARGO:gowall"
+DEPS_MISC_GOWALL="arch:AUR:gowall-bin fedora:gowall debian:COMPILE:https://github.com/Achno/gowall ubuntu:COMPILE:https://github.com/Achno/gowall opensuse:COMPILE:https://github.com/Achno/gowall void:gowall"
 DEPS_MISC_MISSIONCENTER="arch:mission-center fedora:FLATPAK:io.missioncenter.MissionCenter debian:FLATPAK:io.missioncenter.MissionCenter ubuntu:FLATPAK:io.missioncenter.MissionCenter opensuse:FLATPAK:io.missioncenter.MissionCenter void:FLATPAK:io.missioncenter.MissionCenter"
 DEPS_MISC_KCONFIG="arch:kconfig fedora:kf6-kconfig debian:libkf6config-bin ubuntu:libkf6config-bin opensuse:kconfig void:kconfig"
 

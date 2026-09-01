@@ -594,6 +594,13 @@ DEBIAN_TOOLKIT_PKGS=(
   tesseract-ocr
   tesseract-ocr-eng
   tesseract-ocr-spa
+  tesseract-ocr-rus
+  tesseract-ocr-jpn
+  tesseract-ocr-jpn-vert
+  tesseract-ocr-chi-sim
+  tesseract-ocr-chi-sim-vert
+  tesseract-ocr-chi-tra
+  tesseract-ocr-chi-tra-vert
 )
 
 if apt_pkg_available hyprpicker; then
@@ -607,6 +614,16 @@ DEBIAN_SCREENCAPTURE_PKGS=(
   wf-recorder
   imagemagick
   ffmpeg
+  tesseract-ocr
+  tesseract-ocr-eng
+  tesseract-ocr-spa
+  tesseract-ocr-rus
+  tesseract-ocr-jpn
+  tesseract-ocr-jpn-vert
+  tesseract-ocr-chi-sim
+  tesseract-ocr-chi-sim-vert
+  tesseract-ocr-chi-tra
+  tesseract-ocr-chi-tra-vert
 )
 
 # Check if swappy is available (only in trixie/sid, not bookworm)
