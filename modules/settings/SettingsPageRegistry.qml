@@ -231,6 +231,14 @@ Singleton {
             desc: Translation.tr("Move and resize persistent shell surfaces"),
             essential: true,
             component: "modules/settings/ShellLayoutConfig.qml"
+        },
+        {
+            key: "orbit",
+            name: Translation.tr("Orbit"),
+            icon: "hub",
+            desc: Translation.tr("Niri workspace navigator, Trail and Stash"),
+            essential: true,
+            component: "modules/settings/OrbitConfig.qml"
         }
     ]
 
@@ -239,7 +247,7 @@ Singleton {
     readonly property var defaultCategories: [
         { label: Translation.tr("Essentials"), pages: [0] },
         { label: Translation.tr("Appearance"), pages: [4, 25, 3, 14, 21] },
-        { label: Translation.tr("Shell"), pages: [2, 26, 5, 22, 23, 16, 10, 11, 18, 19, 20] },
+        { label: Translation.tr("Shell"), pages: [2, 26, 27, 5, 22, 23, 16, 10, 11, 18, 19, 20] },
         { label: Translation.tr("System"), pages: [1, 24, 7, 6, 12, 15, 8, 17] },
         { label: Translation.tr("Reference"), pages: [9, 13] }
     ]
@@ -300,6 +308,34 @@ Singleton {
             return _staticSearchIndex
 
         _staticSearchIndex = [
+        {
+            pageIndex: 27, pageName: root.pages[27].name,
+            section: Translation.tr("Activation"),
+            label: Translation.tr("Orbit hot corner"),
+            description: Translation.tr("Choose the corner, activation distance and conflict-safe behavior with Niri Overview"),
+            keywords: ["orbit", "overview", "task view", "hot corner", "niri", "workspace", "navigation", "distance", "conflict"]
+        },
+        {
+            pageIndex: 27, pageName: root.pages[27].name,
+            section: Translation.tr("Workspace layout"),
+            label: Translation.tr("Orbit layout"),
+            description: Translation.tr("Visible workspaces, scale, spacing and balanced window grid"),
+            keywords: ["orbit", "workspace", "grid", "scale", "spacing", "preview", "window"]
+        },
+        {
+            pageIndex: 27, pageName: root.pages[27].name,
+            section: Translation.tr("Navigation"),
+            label: Translation.tr("Trail and Stash"),
+            description: Translation.tr("Recent-window navigation and temporary window parking"),
+            keywords: ["orbit", "trail", "stash", "recent", "mru", "minimize", "park", "window"]
+        },
+        {
+            pageIndex: 27, pageName: root.pages[27].name,
+            section: Translation.tr("Material motion"),
+            label: Translation.tr("Orbit motion"),
+            description: Translation.tr("Entry presentation and workspace navigation motion"),
+            keywords: ["orbit", "animation", "motion", "navigation", "glide", "material"]
+        },
         {
             pageIndex: 26, pageName: root.pages[26].name,
             section: Translation.tr("Live shell layout"),
