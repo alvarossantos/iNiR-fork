@@ -1377,6 +1377,10 @@ Singleton {
                         property string waveMode: "fill" // "fill", "line", "ribbon"
                         property string frequencyProfile: "flat" // "flat", "bass", "warm", "vocal", "treble", "smile"
                         property int smoothing: 2
+                        property int organicSensitivity: 50 // 25-200, Organic visualizer deformation gain
+                        property int organicOpacity: 85 // 10-100, Organic halo opacity
+                        property int organicGlow: 45 // 0-100, Organic outer glow
+                        property int organicCoverSize: 57 // 35-75, Organic cover size relative to widget span
                         property int fillRatio: 90
                         property int barOpacity: 100
                         property int waveOpacity: -1 // -1 = use global (appearance.cava.waveOpacity)

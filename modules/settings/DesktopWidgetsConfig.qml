@@ -3843,6 +3843,7 @@ ContentPage {
                     options: [
                         { displayName: Translation.tr("Bars"), icon: "equalizer", value: "bars" },
                         { displayName: Translation.tr("Wave"), icon: "waves", value: "wave" },
+                        { displayName: Translation.tr("Organic"), icon: "bubble_chart", value: "organic" },
                     ]
                 }
 
@@ -4021,7 +4022,62 @@ ContentPage {
                     }
 
                     WidgetSettingRow {
-                        label: Translation.tr("Spectrum height (%)")
+                        visible: Config.getNestedValue(
+                            "background.widgets.visualizer.vizType", "bars") === "organic"
+                        label: Translation.tr("Sensitivity")
+                        StyledSpinBox {
+                            from: 25; to: 200; stepSize: 5
+                            value: Config.getNestedValue(
+                                "background.widgets.visualizer.organicSensitivity", 50)
+                            onValueModified: Config.setNestedValue(
+                                "background.widgets.visualizer.organicSensitivity", value)
+                        }
+                    }
+
+                    WidgetSettingRow {
+                        visible: Config.getNestedValue(
+                            "background.widgets.visualizer.vizType", "bars") === "organic"
+                        label: Translation.tr("Halo opacity (%)")
+                        StyledSpinBox {
+                            from: 10; to: 100; stepSize: 5
+                            value: Config.getNestedValue(
+                                "background.widgets.visualizer.organicOpacity", 85)
+                            onValueModified: Config.setNestedValue(
+                                "background.widgets.visualizer.organicOpacity", value)
+                        }
+                    }
+
+                    WidgetSettingRow {
+                        visible: Config.getNestedValue(
+                            "background.widgets.visualizer.vizType", "bars") === "organic"
+                        label: Translation.tr("Glow (%)")
+                        StyledSpinBox {
+                            from: 0; to: 100; stepSize: 5
+                            value: Config.getNestedValue(
+                                "background.widgets.visualizer.organicGlow", 45)
+                            onValueModified: Config.setNestedValue(
+                                "background.widgets.visualizer.organicGlow", value)
+                        }
+                    }
+
+                    WidgetSettingRow {
+                        visible: Config.getNestedValue(
+                            "background.widgets.visualizer.vizType", "bars") === "organic"
+                        label: Translation.tr("Cover size (%)")
+                        StyledSpinBox {
+                            from: 35; to: 75; stepSize: 1
+                            value: Config.getNestedValue(
+                                "background.widgets.visualizer.organicCoverSize", 57)
+                            onValueModified: Config.setNestedValue(
+                                "background.widgets.visualizer.organicCoverSize", value)
+                        }
+                    }
+
+                    WidgetSettingRow {
+                        label: Config.getNestedValue(
+                            "background.widgets.visualizer.vizType", "bars") === "organic"
+                            ? Translation.tr("Motion range (%)")
+                            : Translation.tr("Spectrum height (%)")
                         StyledSpinBox {
                             from: 10; to: 100; stepSize: 5
                             value: Config.getNestedValue(
@@ -4032,6 +4088,8 @@ ContentPage {
                     }
 
                     WidgetSettingRow {
+                        visible: Config.getNestedValue(
+                            "background.widgets.visualizer.vizType", "bars") !== "organic"
                         label: Translation.tr("Edge inset (px)")
                         StyledSpinBox {
                             from: 0; to: 32; stepSize: 1
@@ -4043,6 +4101,8 @@ ContentPage {
                     }
 
                     WidgetSettingRow {
+                        visible: Config.getNestedValue(
+                            "background.widgets.visualizer.vizType", "bars") !== "organic"
                         label: Translation.tr("Curve headroom (%)")
                         StyledSpinBox {
                             from: 0; to: 100; stepSize: 5
@@ -4112,6 +4172,10 @@ ContentPage {
                     "waveMode": "fill",
                     "frequencyProfile": "flat",
                     "smoothing": 2,
+                    "organicSensitivity": 50,
+                    "organicOpacity": 85,
+                    "organicGlow": 45,
+                    "organicCoverSize": 57,
                     "fillRatio": 90,
                     "barOpacity": 100,
                     "waveOpacity": -1,
