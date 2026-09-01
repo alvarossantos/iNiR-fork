@@ -201,6 +201,11 @@ for required in \
         exit 1
     fi
 done
+if ! grep -Fq 'dnf copr enable -y scottames/awww' "$fedora_installer" \
+        || ! grep -Fq 'dnf copr enable -y achno/gowall' "$fedora_installer"; then
+    printf 'FAIL: Fedora awww/Gowall no longer prefer their focused COPR packages before source fallbacks\n' >&2
+    exit 1
+fi
 if ! grep -Fq '[[ "${OS_GROUP_ID:-unknown}" == "arch" ]]' "$runtime_root/sdata/lib/doctor.sh"; then
     printf 'FAIL: Doctor no longer scopes checkupdates to Arch\n' >&2
     exit 1
