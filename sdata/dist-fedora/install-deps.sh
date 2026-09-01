@@ -77,6 +77,22 @@ install_awww_fedora() {
   if command -v awww &>/dev/null && command -v awww-daemon &>/dev/null; then
     return 0
   fi
+
+  # Fedora has no official awww package, but scottames/awww publishes a focused
+  # RPM containing both awww and awww-daemon for current Fedora releases. Prefer
+  # the prebuilt package to making every user compile Rust dependencies locally.
+  # The COPR explicitly describes itself as personal/unofficial, so keep the
+  # upstream Codeberg build below as a real fallback rather than a hard dependency.
+  if ensure_copr_support; then
+    if ! dnf copr list --enabled 2>/dev/null | grep -q 'scottames/awww'; then
+      sudo dnf copr enable -y scottames/awww >/dev/null 2>&1 || true
+    fi
+    sudo dnf install -y awww >/dev/null 2>&1 || true
+  fi
+  if command -v awww &>/dev/null && command -v awww-daemon &>/dev/null; then
+    return 0
+  fi
+
   ensure_fedora_rust_toolchain || return 1
   sudo dnf install -y lz4-devel libxkbcommon-devel wayland-devel wayland-protocols-devel >/dev/null 2>&1 || return 1
 
@@ -981,6 +997,8 @@ echo ""
 log_info "Fedora package sources:"
 echo "  - niri: Fedora repositories (COPR fallback when unavailable)"
 echo "  - quickshell: compatible Fedora package when >=0.3, otherwise release COPR"
+echo "  - awww: scottames/awww COPR (upstream source fallback)"
+echo "  - gowall: achno/gowall COPR (upstream source fallback)"
 echo ""
 log_info "Installed from repos:"
 echo "  - gum, cliphist (Fedora 44+), xwayland-satellite, swappy, uv, eza"

@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **OCR workflow and Settings**: text recognition now uses one configured language instead of combining every installed model, adapts Tesseract page segmentation and preprocessing to the selected region, remembers the Super+Shift+S snip action, and presents OCR/Japanese/translation/Anki setup as separate Material-oriented steps with technical options kept under Advanced.
 - **Calendar/task detail views**: Dashboard Calendar, Agenda and To Do retain their full-detail views; the right sidebar now exposes Calendar/Events/To Do expansion from each widget's own header instead of placing a changing control in the navigation rail.
-- **Cross-distro setup**: Fedora and Debian/Ubuntu prefer current distro packages and distro-native repair paths, with targeted source/Flatpak/COPR fallbacks only where required; Arch dependency tracking and repository-first installation paths were refreshed accordingly.
+- **Cross-distro setup**: Fedora and Debian/Ubuntu prefer current distro packages and distro-native repair paths, with targeted source/Flatpak/COPR fallbacks only where required; Fedora now prefers the focused `scottames/awww` and `achno/gowall` COPRs before source builds, while Arch dependency tracking and repository-first installation paths were refreshed accordingly.
 
 ### Fixed
 
