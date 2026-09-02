@@ -301,10 +301,11 @@ AbstractBackgroundWidget {
 
             RowLayout {
                 visible: root.vizType !== "organic"
-                Layout.alignment: Qt.AlignHCenter
+                Layout.fillWidth: true
                 spacing: 8
                 StyledText {
-                    text: root.vizType === "bars" ? Translation.tr("Bar count") : Translation.tr("Opacity")
+                    Layout.fillWidth: true
+                    text: root.vizType === "bars" ? Translation.tr("Bar count") : Translation.tr("Wave opacity")
                     color: Appearance.colors.colSubtext
                     font.pixelSize: Appearance.font.pixelSize.smaller
                 }
@@ -322,6 +323,24 @@ AbstractBackgroundWidget {
                         return v >= 0 ? v : (Config.options?.appearance?.cava?.waveOpacity ?? 30)
                     }
                     onValueModified: Config.setNestedValue("background.widgets.visualizer.waveOpacity", value)
+                }
+            }
+
+            RowLayout {
+                visible: root.vizType !== "organic"
+                Layout.fillWidth: true
+                spacing: 8
+                StyledText {
+                    Layout.fillWidth: true
+                    text: Translation.tr("Smoothing")
+                    color: Appearance.colors.colSubtext
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                }
+                StyledSpinBox {
+                    from: 0; to: 8; stepSize: 1
+                    value: Config.getNestedValue("background.widgets.visualizer.smoothing", 2)
+                    onValueModified: Config.setNestedValue(
+                        "background.widgets.visualizer.smoothing", value)
                 }
             }
         }

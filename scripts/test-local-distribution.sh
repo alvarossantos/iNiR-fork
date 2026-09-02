@@ -633,6 +633,8 @@ if ! grep -Fq 'bool edgeMode = ubuf.presentationMode > 1.5' "$organic_shader" \
         || ! grep -Fq 'root.paletteMode === "album"' "$visualizer_widget" \
         || ! grep -Fq 'id: albumArtworkQuantizer' "$visualizer_widget" \
         || ! grep -Fq 'organicSensitivitySetting <= 0.4' "$visualizer_widget" \
+        || ! grep -Fq 'text: Translation.tr("Smoothing")' "$visualizer_widget" \
+        || ! grep -Fq 'background.widgets.visualizer.smoothing' "$visualizer_widget" \
         || grep -Fq 'background.widgets.mediaControls.' "$visualizer_widget" \
         || ! grep -Fq 'Idle motion' "$visualizer_settings"; then
     printf 'FAIL: Organic visualizer can regress to in-card media geometry or lose cover/motion controls\n' >&2
