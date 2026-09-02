@@ -535,6 +535,128 @@ if [[ -d "$runtime_root/distro/arch" ]]; then
     fi
 fi
 
+media_overlay="$runtime_root/modules/mediaControls/components/MediaVisualizerOverlay.qml"
+media_edge="$runtime_root/modules/mediaControls/components/MediaOrganicEdgeAura.qml"
+audio_layer="$runtime_root/modules/common/widgets/AudioVisualizerLayer.qml"
+media_widget="$runtime_root/modules/background/widgets/mediaControls/MediaControlsWidget.qml"
+if ! grep -Fq 'barsOrigin: root.visualizerPosition === "top" ? "top"' "$media_overlay" \
+        || ! grep -Fq 'root.visualizerPosition === "fill" ? "mirror" : "bottom"' "$media_overlay" \
+        || ! grep -Fq 'visible: root.visualizerPosition !== "none" && !root.organic' "$media_overlay" \
+        || grep -Fq 'organicPresentationMode' "$media_overlay" \
+        || [[ ! -f "$media_edge" ]] \
+        || ! grep -Fq 'organicPresentationMode: 2.0' "$media_edge" \
+        || ! grep -Fq 'organicEdgeDirections: Qt.vector4d(1, 1, 1, 1)' "$media_edge" \
+        || grep -Fq 'organicDirection' "$media_edge" \
+        || ! grep -Fq 'MediaOrganicEdgeAura {' "$media_widget" \
+        || ! grep -Fq 'z: -1' "$media_widget" \
+        || ! grep -Fq 'StyledRectangularShadow {' "$media_widget" \
+        || ! grep -Fq 'z: -2' "$media_widget" \
+        || grep -Fq 'maxVisualizerValue: 1000' "$runtime_root/modules/mediaControls/presets/FullPlayer.qml"; then
+    printf 'FAIL: Media Player visualizers can regress to floating Wave/legacy normalization or in-card Organic\n' >&2
+    exit 1
+fi
+if [[ "$(grep -Fc 'property bool organicStretchToHost' "$audio_layer")" -ne 1 ]] \
+        || [[ "$(grep -Fc 'property real organicHollowAmount' "$audio_layer")" -ne 1 ]] \
+        || ! grep -Fq 'presentationMode: root.organicPresentationMode' "$audio_layer"; then
+    printf 'FAIL: shared audio visualizer properties are duplicated or missing\n' >&2
+    exit 1
+fi
+for media_preset in Full Compact Minimal AlbumArt Visualizer Classic Lyrics LyricsSplit ExpandingLyrics; do
+    preset_file="$runtime_root/modules/mediaControls/presets/${media_preset}Player.qml"
+    if ! grep -Fq 'MediaVisualizerOverlay {' "$preset_file" \
+            || ! grep -Fq 'root.vizType === "organic" && root.vizPosition !== "none"' "$preset_file" \
+            || grep -Fq 'maxVisualizerValue: 1000' "$preset_file"; then
+        printf 'FAIL: media preset %s is not on the shared adaptive visualizer path\n' "$media_preset" >&2
+        exit 1
+    fi
+done
+
+organic_shader="$runtime_root/modules/common/widgets/OrganicAudioBlob.frag"
+visualizer_widget="$runtime_root/modules/background/widgets/visualizer/VisualizerWidget.qml"
+visualizer_settings="$runtime_root/modules/settings/DesktopWidgetsConfig.qml"
+if ! grep -Fq 'bool edgeMode = ubuf.presentationMode > 1.5' "$organic_shader" \
+        || ! grep -Fq 'edgeDirections' "$organic_shader" \
+        || ! grep -Fq 'edgeReachHalf' "$organic_shader" \
+        || ! grep -Fq 'float edgeDistanceNormalized' "$organic_shader" \
+        || ! grep -Fq 'float edgeRadialSpan = max(0.18, 0.94 - ubuf.edgeBaseRadius)' "$organic_shader" \
+        || ! grep -Fq 'float edgeCornerRadius;' "$organic_shader" \
+        || ! grep -Fq 'float baseRadius;' "$organic_shader" \
+        || ! grep -Fq 'ubuf.baseRadius + breath + pulsePush' "$organic_shader" \
+        || ! grep -Fq 'vec2 perimeterDirection = vec2(' "$organic_shader" \
+        || grep -Fq 'bool verticalSide = dx < dy' "$organic_shader" \
+        || grep -Fq 'float perimeterPhase' "$organic_shader" \
+        || ! grep -Fq 'float r = edgeMode' "$organic_shader" \
+        || ! grep -Fq 'presentationMask * sourceAlpha' "$organic_shader" \
+        || ! grep -Fq 'outsideMask = smoothstep(-perimeterAA, perimeterAA, cardDistance)' "$organic_shader" \
+        || [[ "$(grep -Fc 'fragColor = vec4' "$organic_shader")" -ne 1 ]] \
+        || grep -Fq 'smoothstep(-0.012' "$organic_shader" \
+        || grep -Fq 'float edgeExtent' "$organic_shader" \
+        || grep -Fq 'float extrusion' "$organic_shader" \
+        || ! grep -Fq 'geometryMargin: root.reach * 1.08' "$media_edge" \
+        || ! grep -Fq 'renderMargin: root.geometryMargin + root.renderPadding' "$media_edge" \
+        || ! grep -Fq 'organicOverscan: 1.0' "$media_edge" \
+        || ! grep -Fq 'organicEdgeReachHalf:' "$media_edge" \
+        || ! grep -Fq 'organicEdgeCornerRadius: root.cardRadius * 2' "$media_edge" \
+        || ! grep -Fq 'root.width + root.geometryMargin * 2' "$media_edge" \
+        || ! grep -Fq 'root.audioActive ? root.visualizerPoints : root.silentPoints' "$media_edge" \
+        || ! grep -Fq 'root.paletteMode === "player"' "$media_edge" \
+        || ! grep -Fq 'root.paletteMode === "accent"' "$media_edge" \
+        || ! grep -Fq 'root.albumPalette.length > 0' "$media_edge" \
+        || ! grep -Fq 'background.widgets.mediaControls.organicSensitivity' "$media_edge" \
+        || ! grep -Fq 'background.widgets.mediaControls.organicMotionSpeed' "$media_edge" \
+        || ! grep -Fq 'background.widgets.mediaControls.organicGlow' "$media_edge" \
+        || ! grep -Fq 'background.widgets.mediaControls.organicRange' "$media_edge" \
+        || grep -Fq 'background.widgets.mediaControls.visualizerRange' "$media_edge" \
+        || grep -Fq 'background.widgets.visualizer.' "$media_edge" \
+        || grep -Fq 'background.widgets.visualizer.organic' "$media_widget" \
+        || ! grep -Fq 'background.widgets.mediaControls.organicSensitivity' "$visualizer_settings" \
+        || ! grep -Fq 'background.widgets.mediaControls.organicPulse' "$visualizer_settings" \
+        || ! grep -Fq 'background.widgets.mediaControls.organicGlow' "$visualizer_settings" \
+        || ! grep -Fq 'background.widgets.mediaControls.organicRange' "$visualizer_settings" \
+        || ! grep -Fq 'component MediaVizMetric: ColumnLayout' "$media_widget" \
+        || ! grep -Fq 'background.widgets.mediaControls.visualizerOpacity' "$media_widget" \
+        || ! grep -Fq 'background.widgets.mediaControls.visualizerRange' "$media_widget" \
+        || ! grep -Fq 'background.widgets.mediaControls.visualizerSmoothing' "$media_widget" \
+        || ! grep -Fq 'background.widgets.mediaControls.visualizerBarCount' "$media_widget" \
+        || ! grep -Fq 'background.widgets.mediaControls.visualizerFrequencyProfile' "$media_widget" \
+        || ! grep -Fq 'background.widgets.mediaControls.visualizerAccentStrength' "$media_widget" \
+        || ! grep -Fq 'organicCoverUnderlap' "$visualizer_widget" \
+        || grep -Fq 'organicInnerGap' "$visualizer_widget" \
+        || ! grep -Fq 'background.widgets.visualizer.organicCoverSize' "$visualizer_widget" \
+        || ! grep -Fq 'background.widgets.visualizer.organicRange' "$visualizer_widget" \
+        || ! grep -Fq 'organicBaseRadius: root.organicBaseRadius' "$visualizer_widget" \
+        || ! grep -Fq 'root.organicCoverSize / root.organicRenderOverscan + 0.078' "$visualizer_widget" \
+        || ! grep -Fq '_organicArtIdentity' "$visualizer_widget" \
+        || ! grep -Fq '?inir_art=' "$visualizer_widget" \
+        || ! grep -Fq '_organicSilentPoints' "$visualizer_widget" \
+        || ! grep -Fq '? root._organicPresent' "$visualizer_widget" \
+        || ! grep -Fq 'root.paletteMode === "album"' "$visualizer_widget" \
+        || ! grep -Fq 'id: albumArtworkQuantizer' "$visualizer_widget" \
+        || ! grep -Fq 'organicSensitivitySetting <= 0.4' "$visualizer_widget" \
+        || grep -Fq 'background.widgets.mediaControls.' "$visualizer_widget" \
+        || ! grep -Fq 'Idle motion' "$visualizer_settings"; then
+    printf 'FAIL: Organic visualizer can regress to in-card media geometry or lose cover/motion controls\n' >&2
+    exit 1
+fi
+
+audio_layer="$runtime_root/modules/common/widgets/AudioVisualizerLayer.qml"
+media_layer="$runtime_root/modules/mediaControls/components/MediaVisualizerOverlay.qml"
+if [[ ! -f "$audio_layer" || ! -f "$media_layer" ]] \
+        || ! grep -Fq 'CavaTheme.visualizerColors' "$audio_layer" \
+        || ! grep -Fq 'CavaService.normalizationCeiling' "$media_layer" \
+        || ! grep -Fq 'visualizerType: root.visualizerType' "$media_layer" \
+        || grep -R -Eq 'WaveVisualizer|CavaVisualizer|maxVisualizerValue: 1000' \
+            "$runtime_root/modules/mediaControls/presets"; then
+    printf 'FAIL: desktop media visualizers are no longer sharing the Cava/Organic renderer contract\n' >&2
+    exit 1
+fi
+organic_qsb="$runtime_root/modules/common/widgets/OrganicAudioBlob.frag.qsb"
+if [[ ! -s "$organic_qsb" ]] \
+        || ! grep -Fq 'property real pulseStrength' "$runtime_root/modules/common/widgets/OrganicAudioBlob.qml"; then
+    printf 'FAIL: Organic visualizer pulse renderer/shader asset is missing\n' >&2
+    exit 1
+fi
+
 step "launcher resolution"
 bash "$launcher" path >/dev/null
 bash "$launcher" status >/dev/null

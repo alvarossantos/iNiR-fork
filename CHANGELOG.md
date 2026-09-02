@@ -15,7 +15,7 @@ A feature release focused on making iNiR easier to install outside Arch, more us
 - **Japanese study resources**: Settings can download current Kaishi, Manabi and Niponismo Anki decks from their upstream releases, while advanced users can import other Yomitan dictionaries. Missing Tesseract language data can self-provision in the user data directory without a manual sudo/package step.
 - **Desktop utility widgets**: new calendar, pixel clock, timer and to-do widgets expand the desktop widget set, with matching Settings integration and persistent state.
 - **Wallpaper transition shaders**: wallpaper changes can use the new transition pipeline and shader effects, with smoother handoff between workspace wallpaper and Niri backdrop rendering.
-- **Organic audio visualizer**: the desktop visualizer gains an organic blob mode alongside the existing spectrum styles.
+- **Organic audio visualizer**: the desktop visualizer gains stronger beat/bass pulse, cover sizing, idle motion and response controls; Media Player reuses the same Cava-driven Organic renderer as a continuous exterior aura around the full rounded card perimeter without entering the card or covering artwork, metadata or controls.
 
 ### Changed
 
@@ -23,6 +23,7 @@ A feature release focused on making iNiR easier to install outside Arch, more us
 - **Calendar/task detail views**: Dashboard Calendar, Agenda and To Do can open full-detail surfaces, while the right sidebar exposes expansion from each widget header instead of adding a changing control to the navigation rail.
 - **OCR workflow and Settings**: text recognition uses the configured language instead of combining every installed model, adapts Tesseract segmentation/preprocessing to the selected region, remembers the Super+Shift+S action and keeps technical Japanese/Anki options behind an Advanced section.
 - **Cross-distro setup**: Fedora and Debian/Ubuntu now use repository-first dependency plans and distro-native repair paths, with targeted COPR/Flatpak/source fallbacks only where required. Fedora prefers the focused `scottames/awww` and `achno/gowall` COPRs before source builds; Arch dependency tracking and Nix packaging/runtime paths were refreshed as well.
+- **Cava visualizer integration**: Advanced Cava settings remain the single owner of audio capture, stereo and global color source; desktop Visualizer and Media Player now share adaptive normalization and Cava palettes, while each widget keeps independent presentation controls such as Organic pulse, range, reach, glow, idle motion and cover geometry.
 - **Wallpaper/background rendering**: lower-resolution wallpapers preserve quality when filling outputs, and Niri backdrop scaling keeps its fill semantics separate from workspace wallpaper presentation.
 
 ### Fixed
