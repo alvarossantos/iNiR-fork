@@ -535,6 +535,21 @@ if [[ -d "$runtime_root/distro/arch" ]]; then
     fi
 fi
 
+step "release polish guards"
+if ! grep -Fq 'message="$(_tui_expand_newlines "${3:-}")"' "$runtime_root/sdata/lib/tui.sh"; then
+    printf 'FAIL: TUI alerts can regress to rendering literal \n sequences\n' >&2
+    exit 1
+fi
+pixel_clock="$runtime_root/modules/background/widgets/clock/PixelClock.qml"
+if grep -Eq 'OpacityMask|maskEnabled|maskSource|StyledDropShadow' "$pixel_clock" \
+        || ! grep -Fq 'renderType: Text.QtRendering' "$pixel_clock" \
+        || ! grep -Fq 'style: root.showShadow ? Text.Raised : Text.Normal' "$pixel_clock" \
+        || ! grep -Fq 'root.width * 0.46' "$pixel_clock" \
+        || ! grep -Fq 'Compose interlocking digits directly' "$pixel_clock"; then
+    printf 'FAIL: Pixel Clock can regress to masked/resampled chromatic edges or shifted geometry\n' >&2
+    exit 1
+fi
+
 media_overlay="$runtime_root/modules/mediaControls/components/MediaVisualizerOverlay.qml"
 media_edge="$runtime_root/modules/mediaControls/components/MediaOrganicEdgeAura.qml"
 audio_layer="$runtime_root/modules/common/widgets/AudioVisualizerLayer.qml"
@@ -638,6 +653,13 @@ if ! grep -Fq 'bool edgeMode = ubuf.presentationMode > 1.5' "$organic_shader" \
         || grep -Fq 'background.widgets.mediaControls.' "$visualizer_widget" \
         || ! grep -Fq 'Idle motion' "$visualizer_settings"; then
     printf 'FAIL: Organic visualizer can regress to in-card media geometry or lose cover/motion controls\n' >&2
+    exit 1
+fi
+
+nightlight_service="$runtime_root/services/Hyprsunset.qml"
+if ! grep -Fq 'inir-wlsunset.service' "$nightlight_service" \
+        || grep -Fq 'Quickshell.execDetached(["/usr/bin/wlsunset"' "$nightlight_service"; then
+    printf 'FAIL: Niri night light can regress to leaking wlsunset inside inir.service\n' >&2
     exit 1
 fi
 
