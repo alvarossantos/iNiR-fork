@@ -454,8 +454,9 @@ Item { // Bar content region
 
     // ═══ Modular layout engine ══════════════════════════════════════════
     // Five zones map 1:1 to the bar's real structure. Pills size to their
-    // natural content; workspaces stays screen-centered; side pills grow
-    // outward and clamp so they never collide with the edge sections.
+    // natural content; the `center` zone stays screen-centered regardless of
+    // which modules it contains; side pills grow outward and clamp so they
+    // never collide with the edge sections.
     // Visibility still comes from Config.options.bar.modules.*; the arrays only
     // define order/zone. Falls back to the classic layout until migrated.
     readonly property bool _layoutMigrated: Config.options?.bar?.layout?.migrated === true
@@ -1123,9 +1124,9 @@ Item { // Bar content region
         }
     }
 
-    Item { // Middle section — workspaces stays screen-centered; the side pills
-           // size to their natural content and grow outward from it, clamped so
-           // they never collide with the edge sections.
+    Item { // Middle section — the center zone stays screen-centered; the side
+           // pills size to their natural content and grow outward from it,
+           // clamped so they never collide with the edge sections.
         id: middleSection
         anchors {
             top: parent.top
