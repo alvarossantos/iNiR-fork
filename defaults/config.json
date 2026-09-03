@@ -1164,7 +1164,7 @@
     "settingsUi": {
         "overlayMode": true,
         "overlayStyle": "rail",
-        "easyMode": true,
+        "easyMode": false,
         "categories": "",
         "chromeLayout": "",
         "overlayAppearance": {

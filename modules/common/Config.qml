@@ -3381,7 +3381,7 @@ Singleton {
                 // narrowed content pane; "focus" = drill-down, one page at a time.
                 // Orthogonal to overlayMode: this picks the look, that picks the host.
                 property string overlayStyle: "rail"
-                property bool easyMode: true    // true = curated essentials only; nav and sub-sections filter to a friendlier subset
+                property bool easyMode: false   // false = full Settings UI; Easy mode remains an explicit opt-in
                 // JSON-encoded [{label, pages:[int]}] — custom nav arrangement; "" = registry defaults.
                 // String on purpose: property var inside JsonObject crashes the VME.
                 property string categories: ""
