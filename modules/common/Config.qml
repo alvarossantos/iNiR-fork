@@ -641,7 +641,7 @@ Singleton {
                     property bool enable: true // Playful companion: she peeks from screen edges and reacts to events (needs mascot.enable)
                     property int intervalMinutes: 25 // Roughly how often she peeks on her own; event reactions are rate-limited separately
                     property int size: 150 // Sprite size in px
-                    property int visibleSeconds: 8 // How long a peek stays before she slides away (hover keeps her)
+                    property int visibleSeconds: 5 // How long a peek stays before she slides away (hover keeps her)
                     property int slideMs: 400 // Slide in/out animation duration
                     property bool musicRequireArtist: true // Ignore artist-less MPRIS players (browser videos posing as music)
                     property JsonObject events: JsonObject {
