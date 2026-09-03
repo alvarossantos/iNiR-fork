@@ -136,7 +136,8 @@
             "barWidth": 2,
             "barSpacing": 1,
             "stereo": true,
-            "waveOpacity": 30
+            "waveOpacity": 30,
+            "allowedApps": []
         },
         "palette": {
             "type": "auto",
@@ -1356,6 +1357,7 @@
         },
         "position": "topRight",
         "screenList": [],
+        "blockedApps": [],
         "timeout": 3000,
         "timeoutCritical": 0,
         "timeoutLow": 5000,

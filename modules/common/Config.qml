@@ -994,6 +994,9 @@ Singleton {
                     property int barSpacing: 1
                     property bool stereo: true
                     property int waveOpacity: 30 // 5-100, fill alpha for WaveVisualizer (0.05–1.0)
+                    // Optional allowlist for internal visualizers. Empty keeps automatic
+                    // active-player/source selection.
+                    property list<string> allowedApps: []
                 }
                 property JsonObject palette: JsonObject {
                     property string type: "auto" // Allowed: auto, scheme-content, scheme-expressive, scheme-fidelity, scheme-fruit-salad, scheme-monochrome, scheme-neutral, scheme-rainbow, scheme-tonal-spot
@@ -2602,6 +2605,8 @@ Singleton {
             property JsonObject notifications: JsonObject {
                 property int timeout: 7000
                 property list<string> screenList: []
+                // App/service names dropped at notification ingress. Empty = allow all.
+                property list<string> blockedApps: []
                 // Daily window where popups are suppressed. History is unaffected.
                 // A window whose end is before its start wraps past midnight.
                 property JsonObject quietHours: JsonObject {
