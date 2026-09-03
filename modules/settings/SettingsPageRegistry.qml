@@ -1797,6 +1797,7 @@ Singleton {
         // =====================================================================
         // Monitors (page 15)
         // =====================================================================
+        { pageIndex: 15, pageName: root.pages[15].name, section: Translation.tr("Monitor arrangement"), label: Translation.tr("Arrange monitors"), description: Translation.tr("Drag displays to match their physical position in Niri"), keywords: ["monitor", "display", "output", "arrange", "position", "layout", "drag", "niri"] },
         { pageIndex: 15, pageName: root.pages[15].name, section: Translation.tr("Shell visibility"), label: Translation.tr("Primary monitor"), description: Translation.tr("Choose the default output for shell popups"), keywords: ["monitor", "display", "primary", "screen", "output"] },
         { pageIndex: 15, pageName: root.pages[15].name, section: Translation.tr("Overview placement"), label: Translation.tr("Active screen only"), description: Translation.tr("Open the overview on the monitor where it was invoked"), keywords: ["overview", "monitor", "screen", "focused", "active", "output"] },
         { pageIndex: 15, pageName: root.pages[15].name, section: Translation.tr("Material shell surfaces"), label: Translation.tr("Bar, dock, sidebars, and media controls"), description: Translation.tr("Choose which monitors show Material shell surfaces"), keywords: ["monitor", "visibility", "bar", "dock", "sidebar", "media", "workspace", "secondary"] },
