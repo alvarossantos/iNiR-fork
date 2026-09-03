@@ -1359,6 +1359,7 @@ Singleton {
                         property int visualizerBarCount: 32
                         property int organicSensitivity: 35
                         property int organicPulse: 150
+                        property int organicCompression: 0 // 0-100, spatially focus spectrum regions
                         property int organicMotionSpeed: 250
                         property int organicIdleMotion: 40
                         property int organicGlow: 100
@@ -1394,6 +1395,7 @@ Singleton {
                         property int smoothing: 2
                         property int organicSensitivity: 25 // 25-200, Organic visualizer deformation gain
                         property int organicPulse: 150 // 0-150, beat/bass expansion
+                        property int organicCompression: 0 // 0-100, spatially focus spectrum regions
                         property int organicMotionSpeed: 250 // 20-250, contour animation speed
                         property int organicIdleMotion: 18 // 0-100, ambient motion floor
                         property int organicOpacity: 100 // 10-100, Organic halo opacity

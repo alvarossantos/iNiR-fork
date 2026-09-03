@@ -34,6 +34,7 @@ Item {
 
     property real organicSensitivity: 0.75
     property real organicPulse: 0.72
+    property real organicCompression: 0.0
     property real organicMotionSpeed: 1.0
     property real organicIdleMotion: 0.16
     property real organicGlow: 0.45
@@ -99,6 +100,7 @@ Item {
         sensitivity: root.organicSensitivity
         amplitude: root.fillRatio
         pulseStrength: root.organicPulse
+        compression: root.organicCompression
         motionSpeed: root.organicMotionSpeed
         idleMotion: root.organicIdleMotion
         glowStrength: root.organicGlow

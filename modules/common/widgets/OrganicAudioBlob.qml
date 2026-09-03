@@ -18,6 +18,9 @@ Item {
     property real sensitivity: 1.0
     property real amplitude: 0.9
     property real pulseStrength: 0.72
+    // Spatially focus spectrum bands into narrower contour regions. Zero keeps
+    // the legacy continuous field; one produces the strongest separation.
+    property real compression: 0.0
     property real motionSpeed: 1.0
     property real idleMotion: 0.16
     property real glowStrength: 0.45
@@ -253,6 +256,7 @@ Item {
         property real reveal: root.reveal
         property real deformationStrength: Math.max(0.25, Math.min(2.0, root.sensitivity))
         property real pulseStrength: Math.max(0, Math.min(1.5, root.pulseStrength))
+        property real compression: Math.max(0, Math.min(1, root.compression))
         property real idleMotion: Math.max(0, Math.min(1, root.idleMotion))
         property real glowStrength: Math.max(0, Math.min(1.5, root.glowStrength))
         property real presentationScale: Math.max(0.45, Math.min(1.35, root.presentationScale))
