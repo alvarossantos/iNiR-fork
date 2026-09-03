@@ -382,6 +382,13 @@ Singleton {
             keywords: ["capture", "screenshot", "snip", "save", "path", "folder", "directory", "picture"]
         },
         {
+            pageIndex: 0, pageName: root.pages[0].name,
+            section: Translation.tr("App filters"),
+            label: Translation.tr("Notification and visualizer app filters"),
+            description: Translation.tr("Mute selected notification senders and restrict visualizer playback sources"),
+            keywords: ["filter", "filters", "app", "apps", "notification", "mute", "block", "visualizer", "cava", "audio", "spotify", "ncspot", "ytmusic", "discord", "slack"]
+        },
+        {
             pageIndex: 19, pageName: root.pages[19].name,
             section: Translation.tr("Mascot"),
             label: Translation.tr("Mascot"),
