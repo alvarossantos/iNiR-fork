@@ -253,6 +253,8 @@ case "${SKIP_QUICKSHELL}" in
     # Install Python packages now that requirements.txt is in place
     showfun install-python-packages
     v install-python-packages
+    showfun ensure-ytmusic-js-runtime
+    v ensure-ytmusic-js-runtime
 
     # Verify installation (only on updates, not fresh install)
     if [[ "${IS_UPDATE}" == "true" && "${SKIP_VERIFICATION}" != "true" ]]; then

@@ -1746,9 +1746,9 @@
         },
         "ytmusic": {
             "enable": false,
-            "autoConnect": true,
+            "autoConnect": false,
             "hideSyncBanner": false,
-            "browser": "firefox",
+            "browser": "",
             "cookiesPath": "",
             "useManualCookies": false,
             "connected": false,

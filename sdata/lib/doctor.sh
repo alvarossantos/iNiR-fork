@@ -507,6 +507,9 @@ check_python_packages() {
         while IFS= read -r line || [[ -n "$line" ]]; do
             [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
             local pkg="${line%%[<>=]*}"
+            # PEP 508 extras describe dependencies of the same distribution;
+            # `uv pip list` reports `yt-dlp`, never `yt-dlp[secretstorage]`.
+            pkg="${pkg%%[*}"
             pkg=$(echo "$pkg" | tr '[:upper:]' '[:lower:]' | tr '_' '-')
             echo "$installed" | grep -q "^${pkg}$" || ((missing++)) || true
         done < "$req"
@@ -519,6 +522,16 @@ check_python_packages() {
         fi
     else
         doctor_fail "uv not installed, cannot check Python packages"
+    fi
+
+    local deno_bin
+    deno_bin="$(command -v deno 2>/dev/null || true)"
+    if ytmusic-deno-compatible "$deno_bin"; then
+        doctor_pass "YT Music JS runtime OK"
+    elif ensure-ytmusic-js-runtime; then
+        doctor_fix "Installed current Deno runtime for YT Music"
+    else
+        doctor_fail "YT Music JS runtime unavailable"
     fi
 }
 

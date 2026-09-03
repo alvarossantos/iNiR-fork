@@ -2830,27 +2830,11 @@ run_update() {
     #     fi
     # fi
 
-    # Update Python venv packages
-    _step_phase_header 6 "Python packages"
-    local venv_dir="${XDG_STATE_HOME}/quickshell/.venv"
-    local req_file="${REPO_ROOT}/sdata/uv/requirements.txt"
-
-    if [[ -f "$req_file" ]] && command -v uv &>/dev/null; then
-        if [[ ! -d "$venv_dir/bin" ]]; then
-            tui_info "Creating Python venv..."
-            uv venv --prompt ii-venv "$venv_dir" -p 3.12 2>/dev/null || uv venv --prompt ii-venv "$venv_dir" 2>/dev/null
-        fi
-
-        if [[ -d "$venv_dir/bin" ]]; then
-            tui_info "Updating Python packages..."
-            source "$venv_dir/bin/activate"
-            uv pip install -q -r "$req_file" 2>/dev/null
-            deactivate
-            tui_success "Python packages updated"
-        fi
-    else
-        tui_success "Python packages (skipped - uv not available)"
-    fi
+    # Keep update semantics identical to fresh install: the managed Python venv
+    # owns ytmusicapi, and Deno is repaired as part of the YT playback runtime.
+    _step_phase_header 6 "Python / YT runtime"
+    install-python-packages
+    ensure-ytmusic-js-runtime
 
     # Signal success to the shell UI before restart
     echo "success" > "$_update_status_file" 2>/dev/null || true

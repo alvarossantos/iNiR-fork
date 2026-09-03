@@ -482,6 +482,186 @@ if [[ "$python_setup_owners" != "$runtime_root/sdata/subcmd-install/3.files.sh" 
     exit 1
 fi
 
+step "YT Music distribution contract"
+for requirements in "$runtime_root/sdata/uv/requirements.in" "$runtime_root/sdata/uv/requirements.txt"; do
+    grep -Fq 'ytmusicapi>=1.12.0' "$requirements" || {
+        printf 'FAIL: managed Python runtime does not own ytmusicapi in %s\n' "$requirements" >&2
+        exit 1
+    }
+    grep -Fq 'yt-dlp[default,secretstorage]' "$requirements" || {
+        printf 'FAIL: managed Python runtime lacks Chromium cookie-loader support in %s\n' "$requirements" >&2
+        exit 1
+    }
+done
+
+grep -Fq 'v ensure-ytmusic-js-runtime' "$runtime_root/sdata/subcmd-install/3.files.sh" || {
+    printf 'FAIL: fresh install does not provision the YT Music JS runtime\n' >&2
+    exit 1
+}
+grep -Fq 'ensure-ytmusic-js-runtime' "$runtime_root/setup" || {
+    printf 'FAIL: update path does not repair the YT Music JS runtime\n' >&2
+    exit 1
+}
+grep -Fq 'YT Music JS runtime unavailable' "$runtime_root/sdata/lib/doctor.sh" || {
+    printf 'FAIL: doctor does not validate/repair the YT Music JS runtime\n' >&2
+    exit 1
+}
+
+if grep -Fq 'python3-ytmusicapi' "$runtime_root/sdata/dist-fedora/install-deps.sh" \
+        || grep -Fq 'python3-ytmusicapi' "$runtime_root/sdata/dist-debian/install-deps.sh"; then
+    printf 'FAIL: setup-managed Fedora/Debian still depend on a distro ytmusicapi package\n' >&2
+    exit 1
+fi
+for dependency in deno yt-dlp-ejs; do
+    grep -Eq "^[[:space:]]*${dependency}[[:space:]]*$" "$runtime_root/sdata/dist-arch/inir-audio/PKGBUILD" || {
+        printf 'FAIL: Arch audio bundle lacks %s\n' "$dependency" >&2
+        exit 1
+    }
+done
+for dependency in deno python-ytmusicapi yt-dlp yt-dlp-ejs; do
+    grep -Eq "^[[:space:]]*depends = ${dependency}$" "$runtime_root/distro/arch/inir-meta/.SRCINFO" || {
+        printf 'FAIL: packaged Arch meta lacks %s\n' "$dependency" >&2
+        exit 1
+    }
+done
+if ! grep -Fq 'ps.ytmusicapi' "$runtime_root/nix/package.nix" \
+        || ! grep -Fq 'ps.yt-dlp' "$runtime_root/nix/package.nix" \
+        || ! grep -Fq 'ps.secretstorage' "$runtime_root/nix/package.nix" \
+        || ! grep -Eq '^[[:space:]]+deno$' "$runtime_root/nix/package.nix" \
+        || ! grep -Eq '^[[:space:]]+yt-dlp$' "$runtime_root/nix/package.nix"; then
+    printf 'FAIL: Nix runtime does not provide the complete YT Music runtime\n' >&2
+    exit 1
+fi
+
+ytmusic_service="$runtime_root/services/YtMusic.qml"
+if grep -Eq '/usr/bin/(yt-dlp|mpv)|js-runtimes=node' "$ytmusic_service" \
+        || ! grep -Fq '"--js-runtimes", "deno"' "$ytmusic_service" \
+        || ! grep -Fq 'command -v deno' "$ytmusic_service"; then
+    printf 'FAIL: YT Music runtime still assumes Arch paths or the obsolete Node JS contract\n' >&2
+    exit 1
+fi
+grep -Fq 'pkg="${pkg%%[*}"' "$runtime_root/sdata/lib/doctor.sh" || {
+    printf 'FAIL: doctor does not normalize Python requirement extras\n' >&2
+    exit 1
+}
+grep -Fq 'yt-dlp-runtime.sh' "$ytmusic_service" || {
+    printf 'FAIL: YT Music does not select the managed yt-dlp runtime\n' >&2
+    exit 1
+}
+if grep -Fq 'Install python-ytmusicapi' "$runtime_root/modules/sidebarLeft/innertune/InnerTuneHome.qml" \
+        || grep -Fq 'Reconnect account on launch' "$runtime_root/modules/settings/SidebarsConfig.qml"; then
+    printf 'FAIL: YT Music UI still exposes manual Python install or implicit browser reconnect\n' >&2
+    exit 1
+fi
+
+python3 - "$runtime_root/scripts/ytmusic_auth.py" <<'PYTEST'
+import hashlib
+import importlib.util
+import pathlib
+import sqlite3
+import sys
+import tempfile
+import os
+
+script = pathlib.Path(sys.argv[1])
+spec = importlib.util.spec_from_file_location("inir_ytmusic_auth_test", script)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+assert "~/.config/mozilla/firefox" in module.FIREFOX_FORKS["firefox"]
+
+with tempfile.TemporaryDirectory(prefix="inir-yt-cookie-fixture-") as tmp:
+    profile = pathlib.Path(tmp) / "profile"
+    profile.mkdir()
+    database = profile / "cookies.sqlite"
+    con = sqlite3.connect(database)
+    con.execute(
+        "CREATE TABLE moz_cookies (host TEXT, path TEXT, isSecure INTEGER, expiry INTEGER, "
+        "name TEXT, value TEXT, originAttributes TEXT)"
+    )
+    con.executemany(
+        "INSERT INTO moz_cookies VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [
+            (".youtube.com", "/", 1, 4102444800, "SAPISID", "fixture-sapisid", ""),
+            (".youtube.com", "/", 1, 4102444800, "LOGIN_INFO", "fixture-login", ""),
+            (".youtube.com", "/", 1, 4102444800, "__Secure-3PSID", "fixture-psid", ""),
+        ],
+    )
+    con.commit()
+    con.close()
+
+    before = hashlib.sha256(database.read_bytes()).hexdigest()
+    output = pathlib.Path(tmp) / "yt-cookies.txt"
+    ok, error = module.extract_firefox_direct(str(profile), str(output))
+    after = hashlib.sha256(database.read_bytes()).hexdigest()
+    assert ok, error
+    assert before == after, "browser cookie DB was modified"
+    exported = output.read_text()
+    assert "SAPISID" in exported and "LOGIN_INFO" in exported
+    assert output.stat().st_mode & 0o777 == 0o600
+
+with tempfile.TemporaryDirectory(prefix="inir-chromium-profile-fixture-") as tmp:
+    previous_home = os.environ.get("HOME")
+    os.environ["HOME"] = tmp
+    try:
+        base = pathlib.Path(tmp) / ".config/google-chrome"
+        profile = base / "Profile 7"
+        profile.mkdir(parents=True)
+        (profile / "Cookies").touch()
+        (base / "Local State").write_text('{"profile":{"last_used":"Profile 7"}}')
+        assert module.find_chrome_profile("chrome") == str(profile)
+    finally:
+        if previous_home is None:
+            os.environ.pop("HOME", None)
+        else:
+            os.environ["HOME"] = previous_home
+PYTEST
+
+python3 - "$runtime_root/scripts/innertube.py" <<'PYTEST'
+import importlib.util
+import pathlib
+import tempfile
+import sys
+
+script = pathlib.Path(sys.argv[1])
+spec = importlib.util.spec_from_file_location("inir_innertube_transaction_test", script)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+with tempfile.TemporaryDirectory(prefix="inir-yt-transaction-fixture-") as tmp:
+    module._CFG_DIR = tmp
+    module.YTCOOKIE_PATH = str(pathlib.Path(tmp) / "yt-cookies.txt")
+    canonical = pathlib.Path(module.YTCOOKIE_PATH)
+    canonical.write_text("previous-valid-session")
+    canonical.chmod(0o600)
+
+    probe_called = False
+    module._run_auth_helper = lambda args, candidate: False
+    def should_not_probe(*args, **kwargs):
+        nonlocal_probe[0] = True
+        return True, "wrong", ""
+    nonlocal_probe = [False]
+    module._account_probe = should_not_probe
+    assert module._extract_and_probe("signed-out", attempts=1) == (False, "", "")
+    assert not nonlocal_probe[0]
+    assert canonical.read_text() == "previous-valid-session"
+
+    def extract_candidate(args, candidate):
+        pathlib.Path(candidate).write_text("candidate-session")
+        pathlib.Path(candidate).chmod(0o600)
+        return True
+    def probe_candidate(path, allow_oauth=True):
+        assert path != module.YTCOOKIE_PATH
+        assert allow_oauth is False
+        assert pathlib.Path(path).read_text() == "candidate-session"
+        return True, "Fixture account", ""
+    module._run_auth_helper = extract_candidate
+    module._account_probe = probe_candidate
+    assert module._extract_and_probe("signed-in", attempts=1)[0]
+    assert canonical.read_text() == "candidate-session"
+    assert canonical.stat().st_mode & 0o777 == 0o600
+PYTEST
+
 step "runtime payload manifests"
 while IFS= read -r runtime_file; do
     [[ -n "$runtime_file" ]] || continue

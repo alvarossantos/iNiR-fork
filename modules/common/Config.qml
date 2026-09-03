@@ -3057,9 +3057,11 @@ Singleton {
                 // YT Music tab - Search and play YouTube music via yt-dlp
                 property JsonObject ytmusic: JsonObject {
                     property bool enable: false
-                    property bool autoConnect: true
+                    // Legacy persisted key. Browser profiles are never read implicitly on startup;
+                    // account reconnect is an explicit Connect/Retry action.
+                    property bool autoConnect: false
                     property bool hideSyncBanner: false
-                    property string browser: "firefox"
+                    property string browser: ""
                     property string cookiesPath: ""
                     property bool useManualCookies: false
                     property bool connected: false
