@@ -26,10 +26,25 @@ step "session tray ordering"
 service_unit="$runtime_root/assets/systemd/inir.service"
 if ! grep -qx 'Type=dbus' "$service_unit" \
         || ! grep -qx 'BusName=org.kde.StatusNotifierWatcher' "$service_unit" \
-        || ! grep -qx 'Before=graphical-session.target' "$service_unit" \
-        || grep -qx 'After=graphical-session.target' "$service_unit" \
-        || grep -qx 'Requisite=graphical-session.target' "$service_unit"; then
-    printf 'FAIL: inir.service does not gate XDG autostart on the tray watcher\n' >&2
+        || ! grep -qx 'PartOf=niri.service' "$service_unit" \
+        || ! grep -qx 'Requisite=niri.service' "$service_unit" \
+        || ! grep -qx 'After=niri.service' "$service_unit" \
+        || ! grep -qx 'Before=xdg-desktop-autostart.target' "$service_unit"; then
+    printf 'FAIL: inir.service is not ordered behind Niri and ahead of XDG autostart\n' >&2
+    exit 1
+fi
+if grep -Fq '/tmp/.X11-unix/X' "$runtime_root/scripts/inir" \
+        || grep -Fq '/tmp/.X11-unix/X' "$runtime_root/modules/common/functions/ShellExec.qml" \
+        || grep -Fq 'niri.wayland-*.sock' "$runtime_root/scripts/inir"; then
+    printf 'FAIL: iNiR still guesses compositor-owned DISPLAY/NIRI_SOCKET from filesystem sockets\n' >&2
+    exit 1
+fi
+session_migration="$runtime_root/sdata/migrations/040-niri-session-environment-lifecycle.sh"
+if [[ ! -f "$session_migration" ]] \
+        || ! grep -Fq 'MIGRATION_SESSION_IMPACT=true' "$session_migration" \
+        || ! grep -Fq 'show_session_impact_notices' "$runtime_root/setup" \
+        || ! grep -Fq 'record_migration_session_impact' "$runtime_root/sdata/lib/migrations.sh"; then
+    printf 'FAIL: session-level lifecycle updates no longer emit a one-shot restart advisory\n' >&2
     exit 1
 fi
 if ! grep -Fq 'property var _trayService: TrayService' "$runtime_root/shell.qml"; then
@@ -42,6 +57,38 @@ if grep -q '^Environment=MALLOC_' "$service_unit" \
     printf 'FAIL: iNiR still overrides the glibc allocator at runtime\n' >&2
     exit 1
 fi
+
+step "suspend lock handshake"
+lock_owner="$runtime_root/modules/lock/Lock.qml"
+idle_owner="$runtime_root/services/Idle.qml"
+if ! grep -Fq 'function prepareSleep(): string' "$lock_owner" \
+        || ! grep -Fq 'return lock.secure ? "secure" : "locking";' "$lock_owner"; then
+    printf 'FAIL: lock before-sleep path does not expose compositor-confirmed secure state\n' >&2
+    exit 1
+fi
+if ! grep -Fq 'lock prepareSleep' "$idle_owner" \
+        || grep -Eq 'before-sleep.*lock activate' "$idle_owner"; then
+    printf 'FAIL: swayidle before-sleep does not wait for the secure lock handshake\n' >&2
+    exit 1
+fi
+if ! grep -Fq 'Lock did not become secure before sleep' "$runtime_root/scripts/inir"; then
+    printf 'FAIL: launcher does not wait for WlSessionLock secure before returning to swayidle\n' >&2
+    exit 1
+fi
+if ! grep -Fq 'Lock IPC was unavailable before sleep and no fallback could secure the session' "$runtime_root/scripts/inir" \
+        || ! grep -Fq '"$swaylock_bin" -f -c 1a1a2e' "$runtime_root/scripts/inir"; then
+    printf 'FAIL: before-sleep does not fail closed when the Quickshell lock target is unavailable\n' >&2
+    exit 1
+fi
+for lock_surface in \
+        "$runtime_root/modules/lock/LockSurface.qml" \
+        "$runtime_root/modules/waffle/lock/WaffleLockSurface.qml" \
+        "$runtime_root/modules/waffle/lock/WaffleLockSurfaceSafe.qml"; do
+    if grep -Fq 'readonly property int imgStatus: avatarImage.status' "$lock_surface"; then
+        printf 'FAIL: lock avatar retry still mutates its source from a synchronous status binding: %s\n' "$lock_surface" >&2
+        exit 1
+    fi
+done
 
 step "service mask handling"
 service_mask_root="$(mktemp -d)"
@@ -686,20 +733,22 @@ bash "$launcher" path >/dev/null
 bash "$launcher" status >/dev/null
 
 step "application launch environment"
-# XWayland is not guaranteed to own :0. Preserve live DISPLAY discovery and validation.
+# Niri owns DISPLAY/WAYLAND_DISPLAY/NIRI_SOCKET. App launches may refresh from
+# the live user-manager snapshot, but must never infer compositor sockets.
 shell_exec="$runtime_root/modules/common/functions/ShellExec.qml"
 inir_launcher="$runtime_root/scripts/inir"
 if ! grep -Fq 'systemctl --user show-environment' "$shell_exec" \
-        || ! grep -Fq '_manager_display="$(manager_value DISPLAY)"' "$shell_exec" \
-        || ! grep -Fq 'valid_display "$DISPLAY"' "$shell_exec" \
-        || ! grep -Fq 'for _x in /tmp/.X11-unix/X*' "$shell_exec"; then
-    printf 'FAIL: application launches do not recover the live XWayland DISPLAY environment\n' >&2
+        || ! grep -Fq 'for _var in DISPLAY WAYLAND_DISPLAY NIRI_SOCKET' "$shell_exec" \
+        || grep -Fq '/tmp/.X11-unix/X' "$shell_exec" \
+        || grep -Fq 'valid_display()' "$shell_exec"; then
+    printf 'FAIL: application launches do not preserve Niri-owned graphical session environment\n' >&2
     exit 1
 fi
-if ! grep -Fq 'vars_to_import+=("DISPLAY=$DISPLAY")' "$inir_launcher" \
-        || ! grep -Fq 'for _xsock in /tmp/.X11-unix/X*' "$inir_launcher" \
-        || ! grep -Fq 'systemctl --user set-environment "${vars_to_import[@]}"' "$inir_launcher"; then
-    printf 'FAIL: session environment does not publish the XWayland DISPLAY to the user manager\n' >&2
+if ! grep -Fq 'for _qs_var in WAYLAND_DISPLAY NIRI_SOCKET DISPLAY' "$inir_launcher" \
+        || grep -Fq '/tmp/.X11-unix/X' "$inir_launcher" \
+        || grep -Fq 'niri.wayland-*.sock' "$inir_launcher" \
+        || grep -Fq 'systemctl --user set-environment "${vars_to_import[@]}"' "$inir_launcher"; then
+    printf 'FAIL: launcher still manufactures or republishes compositor-owned session variables\n' >&2
     exit 1
 fi
 if grep -Fq 'MALLOC_ARENA_MAX' "$shell_exec" \

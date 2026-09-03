@@ -40,12 +40,6 @@ doctor_detect_compositor_service() {
         printf 'niri.service'
         return 0
     fi
-
-    if systemctl --user cat 'wayland-wm@Hyprland.service' &>/dev/null; then
-        printf 'wayland-wm@Hyprland.service'
-        return 0
-    fi
-
     return 1
 }
 

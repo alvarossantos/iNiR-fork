@@ -87,6 +87,8 @@ run_migrate() {
     else
         tui_success "No pending migrations"
     fi
+
+    show_session_impact_notices
 }
 trap cleanup INT
 trap 'type _tui_kill_spinner &>/dev/null && _tui_kill_spinner 2>/dev/null || true; rm -rf /tmp/buildyay /tmp/buildparu 2>/dev/null' EXIT TERM
@@ -195,10 +197,20 @@ sync_launcher_from_repo() {
 
     mkdir -p "$XDG_BIN_HOME"
 
-    local source_real target_real
+    local source_real target_real install_mode
     source_real="$(readlink -f "$launcher_source" 2>/dev/null || printf '%s' "$launcher_source")"
     target_real="$(readlink -f "$launcher_target" 2>/dev/null || true)"
-    if [[ -z "$target_real" || "$source_real" != "$target_real" ]]; then
+    install_mode="$(get_installed_install_mode 2>/dev/null || true)"
+    if [[ -z "$install_mode" || "$install_mode" == "unknown" ]]; then
+        install_mode="$(get_install_mode 2>/dev/null || true)"
+    fi
+
+    if [[ "$install_mode" == "repo-link" ]]; then
+        if [[ ! -L "$launcher_target" || "$source_real" != "$target_real" ]]; then
+            rm -f "$launcher_target"
+            ln -s "$launcher_source" "$launcher_target"
+        fi
+    elif [[ -z "$target_real" || "$source_real" != "$target_real" ]]; then
         if [[ ! -f "$launcher_target" ]] || ! cmp -s "$launcher_source" "$launcher_target" 2>/dev/null; then
             cp -f "$launcher_source" "$launcher_target"
         fi
@@ -215,36 +227,64 @@ sync_user_inir_service_from_repo_if_present() {
     local service_target_dir="${XDG_CONFIG_HOME}/systemd/user"
     local service_target="${service_target_dir}/inir.service"
     local launcher_target="${XDG_BIN_HOME}/inir"
-    local tmp_file
+    local tmp_file install_mode
     local changed=false
 
     [[ -f "$service_asset" ]] || return 1
     inir_user_service_is_masked && return 2
-    [[ -f "$service_target" ]] || return 1
 
     mkdir -p "$service_target_dir"
     mkdir -p "${XDG_CACHE_HOME:-$HOME/.cache}"
-    tmp_file="${XDG_CACHE_HOME:-$HOME/.cache}/inir.service.$$"
+    local service_dropin_dir="${service_target_dir}/inir.service.d"
+    local service_override="${service_dropin_dir}/override.conf"
+    install_mode="$(get_installed_install_mode 2>/dev/null || true)"
+    if [[ -z "$install_mode" || "$install_mode" == "unknown" ]]; then
+        install_mode="$(get_install_mode 2>/dev/null || true)"
+    fi
 
+    if [[ "$install_mode" == "repo-link" ]]; then
+        local service_asset_real service_target_real override_tmp
+        service_asset_real="$(readlink -f "$service_asset" 2>/dev/null || printf '%s' "$service_asset")"
+        service_target_real="$(readlink -f "$service_target" 2>/dev/null || true)"
+        if [[ ! -L "$service_target" || "$service_asset_real" != "$service_target_real" ]]; then
+            rm -f "$service_target"
+            ln -s "$service_asset" "$service_target"
+            changed=true
+        fi
+
+        mkdir -p "$service_dropin_dir"
+        override_tmp="${XDG_CACHE_HOME:-$HOME/.cache}/inir.service.override.$$"
+        cat > "$override_tmp" <<EOF
+# Managed locally: iNiR repo-link launcher override
+[Service]
+ExecStart=
+ExecStart=${launcher_target} run --session
+ExecStopPost=
+ExecStopPost=-${launcher_target} cleanup-orphans
+EOF
+        if [[ ! -f "$service_override" ]] || ! cmp -s "$override_tmp" "$service_override"; then
+            cp -f "$override_tmp" "$service_override"
+            changed=true
+        fi
+        rm -f "$override_tmp"
+
+        # The symlink target can change after git pull without changing the link.
+        # Reload every repo-link sync so systemd sees the current checkout unit.
+        command -v systemctl >/dev/null 2>&1 && systemctl --user daemon-reload >/dev/null 2>&1 || true
+        return 0
+    fi
+
+    tmp_file="${XDG_CACHE_HOME:-$HOME/.cache}/inir.service.$$"
     sed -e "s|^ExecStart=.*|ExecStart=${launcher_target//&/\\&} run --session|" \
         -e "s|^ExecStopPost=-.*|ExecStopPost=-${launcher_target//&/\\&} cleanup-orphans|" \
         "$service_asset" > "$tmp_file"
 
-    if [[ -L "$service_target" ]]; then
-        # A repo-link unit points at the portable template, whose /usr/bin/inir
-        # path is wrong for developer installs.  A drop-in fixes it only after
-        # the first setup/doctor run, so a fresh login can hit 203/EXEC before
-        # that override exists.  Materialize the rendered unit instead.
+    if [[ -L "$service_target" ]] || [[ ! -f "$service_target" ]] || ! cmp -s "$tmp_file" "$service_target"; then
         rm -f "$service_target"
         cp -f "$tmp_file" "$service_target"
         changed=true
-    elif ! cmp -s "$tmp_file" "$service_target"; then
-        changed=true
-        cp -f "$tmp_file" "$service_target"
     fi
 
-    local service_dropin_dir="${service_target_dir}/inir.service.d"
-    local service_override="${service_dropin_dir}/override.conf"
     if [[ -f "$service_override" ]] && grep -q '^# Managed locally:' "$service_override"; then
         rm -f "$service_override"
         rmdir "$service_dropin_dir" 2>/dev/null || true
@@ -275,13 +315,11 @@ ensure_user_inir_service_enabled() {
         return 1
     fi
 
-    # Detect the compositor service — never fall back to graphical-session.target
-    # because that target is active in KDE/GNOME/etc.
+    # iNiR is Niri-only. Never fall back to graphical-session.target or another
+    # compositor service: Niri owns the session environment and lifecycle.
     local target=""
     if systemctl --user cat niri.service &>/dev/null; then
         target="niri.service"
-    elif systemctl --user cat 'wayland-wm@Hyprland.service' &>/dev/null; then
-        target="wayland-wm@Hyprland.service"
     fi
 
     if [[ -z "$target" ]]; then
@@ -2547,10 +2585,7 @@ run_update() {
 
     local launcher_target="${XDG_BIN_HOME}/inir"
     if [[ -f "${REPO_ROOT}/scripts/inir" ]]; then
-        mkdir -p "$XDG_BIN_HOME"
-        cp -f "${REPO_ROOT}/scripts/inir" "$launcher_target"
-        chmod +x "$launcher_target"
-        ensure_launcher_path_in_shells "$XDG_BIN_HOME"
+        sync_launcher_from_repo >/dev/null || tui_warn "Could not refresh the inir launcher"
         if ! command -v inir &>/dev/null && [[ ":$PATH:" != *":${XDG_BIN_HOME}:"* ]]; then
             tui_warn "Launcher installed to ${launcher_target}, but ${XDG_BIN_HOME} is not in PATH for this shell"
         fi
@@ -2846,6 +2881,8 @@ run_update() {
         tui_info "The shell will use new files on next restart"
         tui_info "Or run: inir restart"
     fi
+
+    show_session_impact_notices
 
     echo ""
     show_update_completion "$repo_ver" "$repo_commit"
