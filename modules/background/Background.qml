@@ -638,8 +638,14 @@ Scope {
             )
         readonly property bool effectiveHasPan: bgRoot.hasPan
             && (!bgRoot.externalMainWallpaperEligible || bgRoot._panReadyWallpaperPath === bgRoot.wallpaperPath)
+        // Internal shader transitions are rendered by the QML background. Keep
+        // that renderer as the visible owner for the whole static-wallpaper
+        // lifecycle instead of handing ownership AWWW -> QML -> AWWW around
+        // every transition. A transient ownership handoff can expose the AWWW
+        // wallpaper underneath for one or more compositor frames.
         readonly property bool externalMainWallpaperActive: bgRoot.externalMainWallpaperEligible
             && !bgRoot.effectiveHasPan
+            && !bgRoot.internalShaderTransitionRequested
         property real preferredWallpaperScale: ParallaxMath.resolveZoom(bgRoot.parallaxOptions, 1.0)
         property real _manualWallpaperScaleOverride: 0
         property int wallpaperWidth: modelData.width
