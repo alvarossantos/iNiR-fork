@@ -28,3 +28,6 @@ tqdm
 
 # KDE/Qt theming (for wallpaper-based colors)
 kde-material-you-colors
+
+# Pear Desktop / YouTube Music live theme injection via CDP
+websockets>=13.0
